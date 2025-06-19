@@ -25,6 +25,19 @@ app.get('/', (req, res) => {
   res.send('Hello from Collab Code AI backend!');
 });
 
+//route to create a new document
+app.post('/documents', (req, res) => {
+  //extracts the name from the request body
+  const { name } = req.body;
+  //if no name is provided then it sends a 400 error
+  if (!name) {
+    return res.status(400).json({ message: 'Document name is required' });
+  }
+  // In the future, you'll save the document to the database here
+  //201 status code to return whether it was created successfuly, returing the message data using standard json
+  res.status(201).json({ message: `Document "${name}" created!` });
+});
+
 // Start server
 //tells app to start listening on the port
 app.listen(PORT, () => {

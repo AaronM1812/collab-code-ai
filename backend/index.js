@@ -61,19 +61,31 @@ io.on('connection', (socket) => {
 
   //handle user joining a document
   socket.on('join-document', (documentId) => {
+    console.log('=== JOIN DOCUMENT REQUEST RECEIVED ===');
+    console.log('User:', socket.id);
+    console.log('Document ID:', documentId);
+    
     socket.join(documentId);
+    
     console.log(`User ${socket.id} joined document ${documentId}`);
+    console.log(`Users in room ${documentId}:`, socket.adapter.rooms.get(documentId)?.size || 0);
   });
 
   //handle code changes from users
   socket.on('code-change', (data) => {
-    //sends the change to all other users in the same document except the sender
+    console.log('=== RECEIVED CODE CHANGE ===');
+    console.log('From user:', socket.id);
+    console.log('Document ID:', data.documentId);
+    console.log('Code length:', data.code.length);
+    
+    // Send the change to all other users in the same document
     socket.to(data.documentId).emit('code-update', {
       code: data.code,
       userId: socket.id
     });
-    //log the change
-    console.log(`Code change from ${socket.id} in document ${data.documentId}`);
+    
+    console.log(`Broadcasted code change to room: ${data.documentId}`);
+    console.log(`Users in room ${data.documentId}:`, socket.adapter.rooms.get(data.documentId)?.size || 0);
   });
 
   //log when user leaves

@@ -9,6 +9,10 @@ const cors = require('cors');
 require('dotenv').config();
 //imports socket.io library for real-time communication
 const { Server } = require('socket.io');
+//mongoose for working with mongodb database
+const { MongoClient } = require('mongodb');
+//import the document routes
+const documentRoutes = require('./routes/documents');
 
 //creates the server
 const app = express();
@@ -21,24 +25,32 @@ app.use(cors());
 //backend can understand json data sent by frontend
 app.use(express.json());
 
+//connect to mongodb database, now using local host
+const client = new MongoClient('mongodb://localhost:27017/collab-code-ai', {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+});
+
+client.connect()
+.then(() => {
+  console.log('Connected to MongoDB');
+  const db = client.db('collab-code-ai');
+  // Store db reference for use in routes
+  app.locals.db = db;
+})
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  console.error('Please check your MONGODB_URI in the .env file');
+});
+
 // Test route
 //simple route and message
 app.get('/', (req, res) => {
   res.send('Hello from Collab Code AI backend!');
 });
 
-//route to create a new document
-app.post('/documents', (req, res) => {
-  //extracts the name from the request body
-  const { name } = req.body;
-  //if no name is provided then it sends a 400 error
-  if (!name) {
-    return res.status(400).json({ message: 'Document name is required' });
-  }
-  // In the future, you'll save the document to the database here
-  //201 status code to return whether it was created successfuly, returing the message data using standard json
-  res.status(201).json({ message: `Document "${name}" created!` });
-});
+// Document routes
+app.use('/api/documents', documentRoutes);
 
 // Start server
 //tells app to start listening on the port

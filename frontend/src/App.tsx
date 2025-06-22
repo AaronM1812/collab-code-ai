@@ -4,23 +4,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 //importing the monocoeditor which is used in the app
 import MonacoEditor from '@monaco-editor/react';
-//importing axios to make http requests to backend from the react app
-import axios from 'axios';
 //importing socket.io-client to connect to the backend socket.io server
 import { io, Socket } from 'socket.io-client';
+//importing our new components
+import DocumentList from './components/DocumentList';
+import NewDocumentModal from './components/NewDocumentModal';
+import { Document, apiService } from './services/api';
+import './App.css';
 
 //main app components which will return the UI that will be shown in the browser
 function App() {
-  //state to store backend response, keeps track of backendMessage, intial value is an empty string, so basically backend is a special variable, when setBackendMessage is called, it updates the value of backendMessage which shows in the UI, so in the basic example only p will change
-  const [backendMessage, setBackendMessage] = useState('');
-  //state to store document name
-  const [docName, setDocName] = useState('');
+  //state to store the current document
+  const [currentDocument, setCurrentDocument] = useState<Document | null>(null);
   //state to store the current code
   const [code, setCode] = useState('// Start coding here!');
+  //state to control modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false);
   //ref to control the editor
   const editorRef = useRef<any>(null);
-
-  //socket reference (so it persists across renders, throough use ref)
+  //socket reference (so it persists across renders, through use ref)
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
@@ -30,12 +32,6 @@ function App() {
     // When connected, log a message
     socketRef.current.on('connect', () => {
       console.log('Connected to backend with socket id:', socketRef.current?.id);
-      
-      //join the test document room automatically
-      if (socketRef.current) {
-        socketRef.current.emit('join-document', 'test-document');
-        console.log('Sent join-document request for: test-document');
-      }
     });
 
     // Listen for code updates from other users
@@ -51,82 +47,139 @@ function App() {
     };
   }, []);
 
-  //this function will send GET request to the backend when called
-  const callBackend = async () => {
+  // Function to handle document selection
+  const handleDocumentSelect = async (document: Document) => {
     try {
-      //send GET request to backend
-      const response = await axios.get('http://localhost:3001/');
-      //update state with backend message
-      setBackendMessage(response.data);
+      // Load the full document from the API
+      const fullDocument = await apiService.getDocument(document._id);
+      setCurrentDocument(fullDocument);
+      setCode(fullDocument.content);
+      
+      // Join the document room for real-time collaboration
+      if (socketRef.current) {
+        socketRef.current.emit('join-document', document._id);
+        console.log('Joined document room:', document._id);
+      }
     } catch (error) {
-      //if an error occurs, update state with error message
-      setBackendMessage('Error connecting to backend');
+      console.error('Error loading document:', error);
     }
   };
 
-  //function to handle document creation
-  const handleCreateDocument = async () => {
-    //if no document name, then an error message is displayed
-    if (!docName.trim()) {
-      setBackendMessage('Please enter a document name');
-      return;
-    }
-    //try to send POST request to backend to create document
-    try {
-      const response = await axios.post('http://localhost:3001/documents', {
-        name: docName
-      });
-      //update state with success message from backend
-      setBackendMessage(response.data.message);
-      //checkign if a connection exists
-      if (socketRef.current) {
-        //if so sned a request to join document room to the backend, where doc name is the room name
-        socketRef.current.emit('join-document', docName);
-        //log this message into the browsers console
-        console.log('Joined document room:', docName);
-      }
-      setDocName('');
-    } catch (error) {
-      setBackendMessage('Error creating document');
+  // Function to handle new document creation
+  const handleNewDocument = () => {
+    setIsModalOpen(true);
+  };
+
+  // Function to handle document creation from modal
+  const handleDocumentCreated = (newDocument: Document) => {
+    setCurrentDocument(newDocument);
+    setCode(newDocument.content);
+    
+    // Join the new document room
+    if (socketRef.current) {
+      socketRef.current.emit('join-document', newDocument._id);
+      console.log('Joined new document room:', newDocument._id);
     }
   };
+
+  // Function to save document changes
+  const saveDocument = async () => {
+    if (!currentDocument) return;
+
+    try {
+      const updatedDocument = await apiService.updateDocument(currentDocument._id, {
+        content: code
+      });
+      setCurrentDocument(updatedDocument);
+      console.log('Document saved successfully');
+    } catch (error) {
+      console.error('Error saving document:', error);
+    }
+  };
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!currentDocument) return;
+
+    const autoSaveTimer = setTimeout(() => {
+      saveDocument();
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [code, currentDocument]);
 
   return (
     //this is the main container for the app, it takes up the full height and width of the screen
-    <div style={{ height: '100vh', width: '100vw' }}>
-      {/*title for the app*/}
-      <h1>Collab Code AI</h1>
-      {/*input field to get document name*/}
-      <input
-        type="text"
-        placeholder="Document name"
-        value={docName}
-        onChange={e => setDocName(e.target.value)}
+    <div className="app-container">
+      {/* Document List Sidebar */}
+      <DocumentList
+        onDocumentSelect={handleDocumentSelect}
+        onNewDocument={handleNewDocument}
       />
-      {/*button to create document*/}
-      <button onClick={handleCreateDocument}>Create Document</button>
-      {/*button to call the backend function*/}
-      <button onClick={callBackend}>Call Backend</button>
-      {/*where the backend message will be displayed*/}
-      <p>{backendMessage}</p>
-      {/*the editor component which takes up 80vh of the screen vertically and set js to the default lan for syntax highlighting, and text is the code, and theme set to dark*/}
-      <MonacoEditor
-        height="70vh"
-        defaultLanguage="javascript"
-        value={code}
-        theme="vs-dark"
-        onChange={(value) => {
-          if (value !== undefined) {
-            setCode(value);
-            // Send code changes to backend for real-time sync
-            if (socketRef.current) {
-              socketRef.current.emit('code-change', {
-                documentId: 'test-document',
-                code: value
-              });
-            }
-          }
-        }}
+
+      {/* Main Editor Area */}
+      <div className="editor-container">
+        {/* Editor Header */}
+        <div className="editor-header">
+          <div className="document-info">
+            {currentDocument ? (
+              <>
+                <h2>{currentDocument.name}</h2>
+                <span className="language-badge">{currentDocument.language}</span>
+                <span className="last-saved">Last saved: {new Date(currentDocument.updatedAt).toLocaleTimeString()}</span>
+              </>
+            ) : (
+              <h2>Select a document to start coding</h2>
+            )}
+          </div>
+          {currentDocument && (
+            <button className="save-btn" onClick={saveDocument}>
+              Save
+            </button>
+          )}
+        </div>
+
+        {/* Monaco Editor */}
+        <div className="editor-wrapper">
+          <MonacoEditor
+            height="100%"
+            defaultLanguage="javascript"
+            language={currentDocument?.language || 'javascript'}
+            value={code}
+            theme="vs-dark"
+            options={{
+              minimap: { enabled: true },
+              fontSize: 14,
+              wordWrap: 'on',
+              scrollBeyondLastLine: false,
+              roundedSelection: false,
+              readOnly: false,
+              cursorStyle: 'line',
+            }}
+            onChange={(value) => {
+              if (value !== undefined) {
+                setCode(value);
+                // Send code changes to backend for real-time sync
+                if (socketRef.current && currentDocument) {
+                  socketRef.current.emit('code-change', {
+                    documentId: currentDocument._id,
+                    code: value
+                  });
+                }
+              }
+            }}
+            onMount={(editor) => {
+              editorRef.current = editor;
+            }}
+          />
+        </div>
+      </div>
+
+      {/* New Document Modal */}
+      <NewDocumentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onDocumentCreated={handleDocumentCreated}
       />
     </div>
   );

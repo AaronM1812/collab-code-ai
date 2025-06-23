@@ -13,6 +13,7 @@ const { Server } = require('socket.io');
 const { MongoClient } = require('mongodb');
 //import the document routes
 const documentRoutes = require('./routes/documents');
+const aiRoutes = require('./routes/ai');
 
 //creates the server
 const app = express();
@@ -49,8 +50,11 @@ app.get('/', (req, res) => {
   res.send('Hello from Collab Code AI backend!');
 });
 
+//app.use is used to handle routes, it is a middleware function that is used to handle routes
 // Document routes
 app.use('/api/documents', documentRoutes);
+//ai routes
+app.use('/api/ai', aiRoutes);
 
 // Start server
 //tells app to start listening on the port

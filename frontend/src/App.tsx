@@ -8,9 +8,15 @@ import MonacoEditor from '@monaco-editor/react';
 import { io, Socket } from 'socket.io-client';
 //importing our new components
 import DocumentList from './components/DocumentList';
+//importing the new document modal
 import NewDocumentModal from './components/NewDocumentModal';
+//importing the AI assistant component
+import AIAssistant from './components/AIAssistant';
+//importing the api service to handle the api requests
 import { Document, apiService } from './services/api';
+//importing the css file for the app
 import './App.css';
+
 
 //main app components which will return the UI that will be shown in the browser
 function App() {
@@ -20,6 +26,8 @@ function App() {
   const [code, setCode] = useState('// Start coding here!');
   //state to control modal visibility
   const [isModalOpen, setIsModalOpen] = useState(false);
+  //state to control AI assistant modal visibility
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   //ref to control the editor
   const editorRef = useRef<any>(null);
   //socket reference (so it persists across renders, through use ref)
@@ -108,6 +116,47 @@ function App() {
     return () => clearTimeout(autoSaveTimer);
   }, [code, currentDocument]);
 
+  //this is the function to handle the insertion of the AI suggestion into the editor
+  const handleInsertAISuggestion = (suggestion: string) => {
+    //if the editor reference is not null
+    if (editorRef.current) {
+      //get the editor reference
+      const editor = editorRef.current;
+      //get the selection
+      const selection = editor.getSelection();
+      
+      //if the selection is not null
+      if (selection) {
+        //replace selected text with AI suggestion
+        editor.executeEdits('ai-suggestion', [{
+          //range is the range of the selection
+          range: selection,
+          //text is the AI suggestion
+          text: suggestion
+        }]);
+      } else {
+        //insert at cursor position
+        const position = editor.getPosition();
+        //execute the edits
+        editor.executeEdits('ai-suggestion', [{
+          //range is the range of the selection
+          range: {
+            //start line number is the line number of the selection
+            startLineNumber: position.lineNumber,
+            //start column is the column number of the selection
+            startColumn: position.column,
+            //end line number is the line number of the selection
+            endLineNumber: position.lineNumber,
+            //end column is the column number of the selection
+            endColumn: position.column
+          },
+          //text is the AI suggestion
+          text: suggestion
+        }]);
+      }
+    }
+  };
+
   return (
     //this is the main container for the app, it takes up the full height and width of the screen
     <div className="app-container">
@@ -132,11 +181,29 @@ function App() {
               <h2>Select a document to start coding</h2>
             )}
           </div>
-          {currentDocument && (
-            <button className="save-btn" onClick={saveDocument}>
-              Save
-            </button>
-          )}
+          {/* Editor Actions */}
+          <div className="editor-actions">
+            {/*if the current document is not null, show the editor actions*/}
+            {currentDocument && (
+              <>
+                {/*AI button is the button to open the AI assistant*/}
+                <button 
+                  //className is the class of the button
+                  className="ai-btn" 
+                  //onClick is the function to handle the click of the button
+                  onClick={() => setIsAIAssistantOpen(true)}
+                  //title is the title of the button
+                  title="Ask AI for help with your code"
+                >
+                  🤖 Ask AI
+                </button>
+                {/*Save button is the button to save the document*/}
+                <button className="save-btn" onClick={saveDocument}>
+                  Save
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Monaco Editor */}
@@ -175,11 +242,21 @@ function App() {
         </div>
       </div>
 
-      {/* New Document Modal */}
+
+      {/*New Document Modal is the modal to create a new document*/}
       <NewDocumentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onDocumentCreated={handleDocumentCreated}
+      />
+
+      {/* AI Assistant Modal is the modal to open the AI assistant*/}
+      {/*this part handles the ai modal using the seperate ai assitant.tsx, it is used throughout the app.tsx*/}
+      <AIAssistant
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        code={code}
+        onInsertSuggestion={handleInsertAISuggestion}
       />
     </div>
   );

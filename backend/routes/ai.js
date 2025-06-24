@@ -5,15 +5,10 @@ const express = require('express');
 //creating a router
 const router = express.Router();
 //importing the openai api
-const { Configuration, OpenAIApi } = require('openai');
+const OpenAI = require('openai');
 
 //load API key from environment, stored in env file
-const configuration = new Configuration({
-  //api key is stored in env file, i created open ai key from open ai website
-  apiKey: process.env.OPENAI_API_KEY,
-});
-//create a new openai api
-const openai = new OpenAIApi(configuration);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //post request to suggest route
 router.post('/suggest', async (req, res) => {
@@ -27,15 +22,15 @@ router.post('/suggest', async (req, res) => {
 
   try {
     //compose the message for the AI
-    const userMessage = `Here's some code:\n\n${code}\n\n${prompt}`;
+    const userMessage = `Here is some code:\n\n${code}\n\n${prompt}`;
 
     //create a new chat completion
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       //model selection
       model: 'gpt-3.5-turbo',
       //gives the system a role and the user message
       messages: [
-        { role: 'system', content: 'You are a helpful AI pair programmer. Answer clearly and concisely.' },
+        { role: 'system', content: 'You are a helpful AI code assistant.' },
         { role: 'user', content: userMessage },
       ],
       //max tokens is the maximum number of tokens the AI can use, to prevent overuse
@@ -45,12 +40,12 @@ router.post('/suggest', async (req, res) => {
     });
 
     //get the AI's response
-    const aiResponse = completion.data.choices[0].message.content;
+    const suggestion = completion.choices[0].message.content;
     //send the AI's response to the frontend usign res, remeber res is for sending data to the frontend and req is for getting data from the frontend
-    res.json({ suggestion: aiResponse });
+    res.json({ suggestion });
   } catch (error) {
     //if error, log the error
-    console.error('OpenAI API error:', error.response?.data || error.message);
+    console.error('OpenAI API error:', error);
     res.status(500).json({ error: 'Failed to get AI suggestion.' });
   }
 });

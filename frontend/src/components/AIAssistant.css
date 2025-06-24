@@ -1,0 +1,189 @@
+.ai-assistant-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.ai-assistant-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.ai-assistant-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e1e5e9;
+  background: #f8f9fa;
+  border-radius: 8px 8px 0 0;
+}
+
+.ai-assistant-header h3 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ai-assistant-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.ai-assistant-close:hover {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.ai-assistant-form {
+  padding: 24px;
+}
+
+.ai-assistant-input-group {
+  margin-bottom: 20px;
+}
+
+.ai-assistant-input-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.ai-assistant-input-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.2s;
+}
+
+.ai-assistant-input-group textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.ai-assistant-submit {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ai-assistant-submit:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.ai-assistant-submit:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.ai-assistant-error {
+  margin: 16px 24px;
+  padding: 12px;
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.ai-assistant-response {
+  padding: 0 24px 24px;
+  border-top: 1px solid #e1e5e9;
+  margin-top: 16px;
+  padding-top: 20px;
+}
+
+.ai-assistant-response h4 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ai-assistant-suggestion {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ai-assistant-suggestion pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #495057;
+}
+
+.ai-assistant-insert {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.ai-assistant-insert:hover {
+  background: #218838;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .ai-assistant-modal {
+    width: 95%;
+    margin: 20px;
+  }
+  
+  .ai-assistant-header,
+  .ai-assistant-form,
+  .ai-assistant-response {
+    padding: 16px;
+  }
+} 

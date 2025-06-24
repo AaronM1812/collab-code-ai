@@ -104,6 +104,31 @@
   background: #005a9e;
 }
 
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-btn:hover {
+  background: #218838;
+}
+
 .editor-wrapper {
   flex: 1;
   position: relative;

@@ -362,7 +362,7 @@ class ApiService {
   //get shared documents (documents shared with current user)
   async getSharedDocuments(): Promise<Document[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/collaboration/shared`, {
+      const response = await axios.get(`${API_BASE_URL}/documents/shared`, {
         headers: this.getAuthHeaders()
       });
       return response.data;
@@ -374,7 +374,7 @@ class ApiService {
   //get owned documents
   async getOwnedDocuments(): Promise<Document[]> {
     try {
-      const response = await axios.get(`${API_BASE_URL}/collaboration/owned`, {
+      const response = await axios.get(`${API_BASE_URL}/documents/owned`, {
         headers: this.getAuthHeaders()
       });
       return response.data;

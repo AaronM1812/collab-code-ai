@@ -48,7 +48,10 @@ class Document {
   //find all documents shared with a user
   static async findAllSharedWithUser(db, userId) {
     return await db.collection('documents').find({
-      'collaborators.userId': userId
+      $and: [
+        { 'collaborators.userId': userId },
+        { userId: { $ne: userId } } // Exclude documents owned by the user
+      ]
     }).toArray();
   }
 

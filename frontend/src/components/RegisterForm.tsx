@@ -55,60 +55,70 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin 
   //this is the return statement for the register form component
   return (
     //this is the container for the register form
-    <div className="auth-form-container">
-      <h2>Register</h2>
+    <div>
       {/*this is the form for the register component*/}
       <form onSubmit={handleSubmit} className="auth-form">
         {/*this is the username input*/}
-        <label>
-          {/*this is the username input*/}
-          Username
-          {/*this is the input for the username*/}
+        <div className="form-group">
+          <label htmlFor="username">Username</label>
           <input
+            id="username"
             type="text"
             name="username"
             value={form.username}
             onChange={handleChange}
             required
             autoComplete="username"
+            placeholder="Choose a username"
           />
-        </label>
+        </div>
+        
         {/*this is the email input*/}
-        <label>
-          {/*this is the email input*/}
-          Email
-          {/*this is the input for the email*/}
+        <div className="form-group">
+          <label htmlFor="email">Email</label>
           <input
+            id="email"
             type="email"
             name="email"
             value={form.email}
             onChange={handleChange}
             required
             autoComplete="email"
+            placeholder="Enter your email"
           />
-        </label>
+        </div>
+        
         {/*this is the password input*/}
-        <label>
-          {/*this is the password input*/}
-          Password
-          {/*this is the input for the password*/}
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
           <input
+            id="password"
             type="password"
             name="password"
             value={form.password}
             onChange={handleChange}
             required
             autoComplete="new-password"
+            placeholder="Create a password"
           />
-        </label>
+        </div>
+        
         {/*this is the submit button*/}
-        <button type="submit" disabled={loading}>
-          {/*this is the text for the submit button*/}
-          {loading ? 'Registering...' : 'Register'}
+        <button type="submit" disabled={loading} className="auth-button">
+          {loading ? (
+            <>
+              <span className="loading-spinner"></span>
+              Registering...
+            </>
+          ) : (
+            'Register'
+          )}
         </button>
       </form>
+      
       {error && <div className="auth-error">{error}</div>}
       {success && <div className="auth-success">{success}</div>}
+      
       <div className="auth-switch">
         Already have an account?{' '}
         <button type="button" onClick={onSwitchToLogin} className="auth-link">

@@ -9,13 +9,13 @@ const router = express.Router();
 // Helper function to generate tokens
 const generateTokens = (user) => {
   const accessToken = jwt.sign(
-    { userId: user._id, username: user.username },
+    { userId: user._id.toString(), username: user.username },
     process.env.JWT_SECRET || 'devsecret',
     { expiresIn: '15m' } // Short-lived access token
   );
 
   const refreshToken = jwt.sign(
-    { userId: user._id },
+    { userId: user._id.toString() },
     process.env.JWT_REFRESH_SECRET || 'devrefreshsecret',
     { expiresIn: '7d' } // Long-lived refresh token
   );
@@ -72,7 +72,7 @@ router.post('/login', async (req, res) => {
     res.json({ 
       accessToken, 
       refreshToken,
-      user: { id: user._id, username: user.username, email: user.email } 
+      user: { id: user._id.toString(), username: user.username, email: user.email } 
     });
   } catch (err) {
     console.error('Login error:', err);
@@ -105,7 +105,7 @@ router.post('/refresh', async (req, res) => {
     res.json({
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
-      user: { id: user._id, username: user.username, email: user.email }
+      user: { id: user._id.toString(), username: user.username, email: user.email }
     });
   } catch (err) {
     console.error('Token refresh error:', err);
@@ -122,6 +122,60 @@ router.post('/logout', async (req, res) => {
   } catch (err) {
     console.error('Logout error:', err);
     res.status(500).json({ error: 'Server error during logout' });
+  }
+});
+
+// Validate token route
+router.get('/validate', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.substring(7);
+    
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+    
+    // Check if user still exists
+    const db = req.app.locals.db;
+    const user = await User.findById(db, decoded.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    res.json({ valid: true, user: { id: user._id.toString(), username: user.username, email: user.email } });
+  } catch (err) {
+    console.error('Token validation error:', err);
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// Get current user info route
+router.get('/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.substring(7);
+    
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'devsecret');
+    
+    // Get user info
+    const db = req.app.locals.db;
+    const user = await User.findById(db, decoded.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    res.json({ id: user._id.toString(), username: user.username, email: user.email });
+  } catch (err) {
+    console.error('Get user info error:', err);
+    res.status(401).json({ error: 'Invalid token' });
   }
 });
 

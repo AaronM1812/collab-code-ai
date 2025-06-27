@@ -34,31 +34,57 @@ const CursorOverlay: React.FC<CursorOverlayProps> = ({
   const eventDisposablesRef = useRef<any[]>([]);
 
   useEffect(() => {
-    if (!editor || !awareness || !overlayRef.current) return;
+    if (!editor || !awareness || !overlayRef.current) {
+      console.log('CursorOverlay: Missing required props', { 
+        hasEditor: !!editor, 
+        hasAwareness: !!awareness, 
+        hasOverlayRef: !!overlayRef.current 
+      });
+      return;
+    }
+
+    console.log('CursorOverlay: Setting up cursor tracking');
 
     const updateCursors = () => {
       const states = awareness.getStates();
+      console.log('CursorOverlay: Awareness states:', states);
+      
       const currentCursors = new Set<string>();
 
       states.forEach((state: any, clientId: string) => {
-        if (clientId === currentUserId || !state.user || !state.cursor) return;
+        console.log('CursorOverlay: Processing state for client:', clientId, state);
+        
+        // Convert clientId to string for comparison
+        const clientIdStr = String(clientId);
+        const currentUserIdStr = String(currentUserId);
+        
+        if (clientIdStr === currentUserIdStr || !state.user || !state.cursor) {
+          console.log('CursorOverlay: Skipping client:', clientId, 'reason:', {
+            isCurrentUser: clientIdStr === currentUserIdStr,
+            hasUser: !!state.user,
+            hasCursor: !!state.cursor
+          });
+          return;
+        }
 
-        currentCursors.add(clientId);
+        currentCursors.add(clientIdStr);
         
         const cursorInfo: CursorInfo = {
-          id: clientId,
+          id: clientIdStr,
           username: state.user.username,
           color: state.user.color,
           position: state.cursor,
           selection: state.selection
         };
 
+        console.log('CursorOverlay: Creating cursor for:', cursorInfo);
         updateCursorElement(cursorInfo);
       });
 
       // Remove cursors that are no longer active
       cursorsRef.current.forEach((element, clientId) => {
         if (!currentCursors.has(clientId)) {
+          console.log('CursorOverlay: Removing cursor for client:', clientId);
           element.remove();
           cursorsRef.current.delete(clientId);
         }

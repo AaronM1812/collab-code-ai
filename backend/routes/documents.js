@@ -28,6 +28,32 @@ router.get('/', async (req, res) => {
   }
 });
 
+//get owned documents route
+router.get('/owned', async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    //function call to find documents owned by the current user
+    const documents = await Document.findAllOwnedByUser(db, req.user.userId);
+    res.json(documents);
+  } catch (error) {
+    console.error('Error fetching owned documents:', error);
+    res.status(500).json({ error: 'Failed to fetch owned documents' });
+  }
+});
+
+//get shared documents route
+router.get('/shared', async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    //function call to find documents shared with the current user
+    const documents = await Document.findAllSharedWithUser(db, req.user.userId);
+    res.json(documents);
+  } catch (error) {
+    console.error('Error fetching shared documents:', error);
+    res.status(500).json({ error: 'Failed to fetch shared documents' });
+  }
+});
+
 //get document by id route (with user ownership check)
 router.get('/:id', async (req, res) => {
   try {
@@ -71,7 +97,7 @@ router.post('/', async (req, res) => {
       name,
       content: content || '// Start coding here!',
       language: language || 'javascript',
-      userId: req.user.userId, // Add the current user's ID
+      userId: req.user.userId, // Add the current user's ID (now a string)
       owner: req.user.username // Add the owner name
     });
     

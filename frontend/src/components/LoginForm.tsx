@@ -48,44 +48,53 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchToRegiste
   //this is the return statement for the login form component
   return (
     //this is the container for the login form
-    <div className="auth-form-container">
-      <h2>Login</h2>
+    <div>
       <form onSubmit={handleSubmit} className="auth-form">
         {/*this is the email input*/}
-        <label>
-          {/*this is the email input*/}
-          Email
-          {/*this is the input for the email*/}
+        <div className="form-group">
+          <label htmlFor="email">Email</label>
           <input
+            id="email"
             type="email"
             name="email"
             value={form.email}
             onChange={handleChange}
             required
             autoComplete="email"
+            placeholder="Enter your email"
           />
-        </label>
+        </div>
+        
         {/*this is the password input*/}
-        <label>
-          {/*this is the password input*/}
-          Password
-          {/*this is the input for the password*/}
+        <div className="form-group">
+          <label htmlFor="password">Password</label>
           <input
+            id="password"
             type="password"
             name="password"
             value={form.password}
             onChange={handleChange}
             required
             autoComplete="current-password"
+            placeholder="Enter your password"
           />
-        </label>
+        </div>
+        
         {/*this is the submit button*/}
-        <button type="submit" disabled={loading}>
-          {/*this is the text for the submit button*/}
-          {loading ? 'Logging in...' : 'Login'}
+        <button type="submit" disabled={loading} className="auth-button">
+          {loading ? (
+            <>
+              <span className="loading-spinner"></span>
+              Logging in...
+            </>
+          ) : (
+            'Login'
+          )}
         </button>
       </form>
+      
       {error && <div className="auth-error">{error}</div>}
+      
       <div className="auth-switch">
         Don&apos;t have an account?{' '}
         <button type="button" onClick={onSwitchToRegister} className="auth-link">

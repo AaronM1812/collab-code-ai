@@ -5,6 +5,8 @@ import React, { useState } from 'react';
 //importing the login form and the register form
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
+//importing the css file for the auth page
+import './AuthPage.css';
 
 //this is the interface for the auth page props
 interface AuthPageProps {
@@ -19,17 +21,26 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
   //otherwise, show login or register form
   return (
     <div className="auth-page">
-      {showLogin ? (
-        <LoginForm
-          onLoginSuccess={onLoginSuccess}
-          onSwitchToRegister={() => setShowLogin(false)}
-        />
-      ) : (
-        <RegisterForm
-          onSuccess={() => setShowLogin(true)}
-          onSwitchToLogin={() => setShowLogin(true)}
-        />
-      )}
+      <div className="auth-container">
+        <div className="auth-header">
+          <div className="auth-logo">🤖 CollabCode AI</div>
+          <div className="auth-subtitle">
+            {showLogin ? 'Welcome back!' : 'Join the collaboration'}
+          </div>
+        </div>
+        
+        {showLogin ? (
+          <LoginForm
+            onLoginSuccess={onLoginSuccess}
+            onSwitchToRegister={() => setShowLogin(false)}
+          />
+        ) : (
+          <RegisterForm
+            onSuccess={() => setShowLogin(true)}
+            onSwitchToLogin={() => setShowLogin(true)}
+          />
+        )}
+      </div>
     </div>
   );
 };

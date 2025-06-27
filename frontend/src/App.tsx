@@ -34,27 +34,83 @@ import { WebsocketProvider } from 'y-websocket';
 //monaco binding to sunc the editor with yjs for real time code collab
 import { MonacoBinding } from 'y-monaco';
 
+// User type definition
+interface User {
+  id: string;
+  username: string;
+  email: string;
+}
+
 //main app components which will return the UI that will be shown in the browser
 function App() {
   // All hooks at the top
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+  const [user, setUser] = useState<User | null>(() => {
+    // Don't automatically restore user from localStorage
+    // Let the token refresh mechanism handle this
+    return null;
   });
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const [currentDocument, setCurrentDocument] = useState<Document | null>(null);
   const [code, setCode] = useState('// Start coding here!');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [documentToShare, setDocumentToShare] = useState<Document | null>(null);
+  const lastSavedContentRef = useRef<string>(''); // Track last saved content separately
   const editorRef = useRef<any>(null);
   const socketRef = useRef<Socket | null>(null);
   const yjsProviderRef = useRef<WebsocketProvider | null>(null);
   const awarenessRef = useRef<any>(null);
   const eventDisposablesRef = useRef<any[]>([]);
 
+  // Validate current session on app startup
+  useEffect(() => {
+    const validateSession = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      const storedUser = localStorage.getItem('user');
+
+      if (!accessToken || !refreshToken || !storedUser) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Try to validate the current token
+        const response = await fetch('http://localhost:3001/api/auth/validate', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+        } else {
+          // Token is invalid, clear everything
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+        }
+      } catch (error) {
+        console.error('Session validation failed:', error);
+        // Clear everything on error
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    validateSession();
+  }, []);
+
   //handle login success from AuthPage
-  const handleLoginSuccess = (user: any, accessToken: string) => {
+  const handleLoginSuccess = (user: User, accessToken: string) => {
     setUser(user);
+    setIsLoading(false);
   };
 
   //handle logout
@@ -65,6 +121,8 @@ function App() {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      setCurrentDocument(null);
+      setCode('// Start coding here!');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
@@ -74,9 +132,37 @@ function App() {
   //handle token expiration
   const handleTokenExpired = () => {
     setUser(null);
+    setCurrentDocument(null);
+    setCode('// Start coding here!');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+  };
+
+  // Handle successful token refresh
+  const handleTokenRefresh = async () => {
+    try {
+      // Get the current user from the refreshed token
+      const response = await fetch('http://localhost:3001/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const userData: User = await response.json();
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+      } else {
+        // If we can't get user data, clear everything
+        handleTokenExpired();
+      }
+    } catch (error) {
+      console.error('Failed to get user data after token refresh:', error);
+      handleTokenExpired();
+    }
   };
 
   //handle share document
@@ -103,6 +189,7 @@ function App() {
       const fullDocument = await apiService.getDocument(document._id);
       setCurrentDocument(fullDocument);
       setCode(fullDocument.content);
+      lastSavedContentRef.current = fullDocument.content; // Reset last saved content
       
       //join the document room for real-time collaboration
       if (socketRef.current) {
@@ -135,24 +222,42 @@ function App() {
   const saveDocument = async () => {
     if (!currentDocument) return;
 
+    // Don't save if content hasn't actually changed
+    if (code === lastSavedContentRef.current) {
+      console.log('Document content unchanged, skipping save');
+      return;
+    }
+
     try {
+      console.log('Saving document with content length:', code.length);
       const updatedDocument = await apiService.updateDocument(currentDocument._id, {
         content: code
       });
       setCurrentDocument(updatedDocument);
+      lastSavedContentRef.current = code; // Update last saved content
       console.log('Document saved successfully');
     } catch (error) {
       console.error('Error saving document:', error);
     }
   };
 
-  //auto-save functionality
+  //auto-save functionality - disabled during Yjs collaboration to prevent conflicts
   useEffect(() => {
-    if (!currentDocument) return;
+    if (!currentDocument || yjsProviderRef.current) return; // Skip auto-save if Yjs is active
 
+    // Initialize last saved content when document is loaded
+    if (lastSavedContentRef.current === '') {
+      lastSavedContentRef.current = currentDocument.content;
+    }
+
+    // Only auto-save for non-collaborative documents
     const autoSaveTimer = setTimeout(() => {
-      saveDocument();
-    }, 2000);
+      // Only save if the code has actually changed from the last saved version
+      if (code !== lastSavedContentRef.current) {
+        console.log('Auto-saving document...');
+        saveDocument();
+      }
+    }, 10000); // Increased to 10 seconds to reduce conflicts
 
     return () => clearTimeout(autoSaveTimer);
   }, [code, currentDocument]);
@@ -200,7 +305,7 @@ function App() {
 
   //this is the function to handle the real-time collaboration using yjs and monaco
   useEffect(() => {
-    //only run if both the document is loaded and the ediotr is ready
+    //only run if both the document is loaded and the editor is ready
     if (!currentDocument || !editorRef.current || !user) return;
 
     // Wait for the editor model to be available
@@ -221,6 +326,8 @@ function App() {
     let monacoBinding: any;
 
     try {
+      console.log('Setting up Yjs collaboration for document:', currentDocument._id);
+      
       //creating a new yjs document, datastructre for collaboration
       ydoc = new Y.Doc();
 
@@ -231,6 +338,26 @@ function App() {
 
       //getting a shared text type for the code
       const yText = ydoc.getText('monaco');
+
+      // Wait for the provider to connect before initializing
+      provider.on('sync', (isSynced: boolean) => {
+        if (isSynced) {
+          console.log('Yjs provider synced');
+          
+          // Initialize Yjs with the current document content if it's empty
+          if (yText.toString().trim() === '') {
+            console.log('Initializing Yjs with document content:', currentDocument.content);
+            yText.insert(0, currentDocument.content);
+          } else {
+            console.log('Yjs already has content, updating editor');
+            // Update the editor model directly with Yjs content
+            const yjsContent = yText.toString();
+            if (yjsContent !== model.getValue()) {
+              model.setValue(yjsContent);
+            }
+          }
+        }
+      });
 
       //binding the monaco editor to yjs
       monacoBinding = new MonacoBinding(
@@ -257,13 +384,20 @@ function App() {
 
       // Set user information in awareness
       provider.awareness.setLocalStateField('user', {
+        id: user.id,
+        username: user.username,
+        color: getRandomColor(user.username)
+      });
+
+      console.log('Yjs: Set local user state:', {
+        id: user.id,
         username: user.username,
         color: getRandomColor(user.username)
       });
 
       // Track cursor position and selection
       const updateAwareness = () => {
-        if (!editorRef.current) return;
+        if (!editorRef.current || !provider.awareness) return;
         
         const position = editorRef.current.getPosition();
         const selection = editorRef.current.getSelection();
@@ -283,6 +417,12 @@ function App() {
         } else {
           provider.awareness.setLocalStateField('selection', null);
         }
+
+        console.log('Yjs: Updated awareness with cursor:', {
+          lineNumber: position.lineNumber,
+          column: position.column,
+          hasSelection: !!(selection && !selection.isEmpty())
+        });
       };
 
       // Listen for cursor and selection changes using disposables
@@ -291,13 +431,16 @@ function App() {
       disposables.push(editor.onDidChangeCursorSelection(updateAwareness));
       eventDisposablesRef.current = disposables;
 
-      //syncing the react state with yjs
-      const updateCodeFromYjs = () => {
-        setCode(yText.toString());
+      // Update React state when Yjs content changes (for auto-save)
+      const updateReactState = () => {
+        const yjsContent = yText.toString();
+        if (yjsContent !== code && yjsContent !== currentDocument.content) {
+          console.log('Yjs content changed, updating React state');
+          setCode(yjsContent);
+        }
       };
-      yText.observe(updateCodeFromYjs);
-      //setting the initial code
-      setCode(yText.toString());
+      
+      yText.observe(updateReactState);
 
     } catch (error) {
       console.error('Error setting up Yjs collaboration:', error);
@@ -307,6 +450,8 @@ function App() {
     //cleaning up when the component unmounts or document/editor changes
     return () => {
       try {
+        console.log('Cleaning up Yjs collaboration');
+        
         // Dispose of all event listeners
         eventDisposablesRef.current.forEach(disposable => {
           if (disposable && typeof disposable.dispose === 'function') {
@@ -330,13 +475,22 @@ function App() {
         console.error('Error cleaning up Yjs collaboration:', error);
       }
     };
-  }, [currentDocument, editorRef.current, user]);
+  }, [currentDocument, user]);
 
   //now do conditional rendering
+  if (isLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <>
-        <TokenRefresh onTokenExpired={handleTokenExpired} />
+        <TokenRefresh onTokenExpired={handleTokenExpired} onTokenRefresh={handleTokenRefresh} />
         <AuthPage onLoginSuccess={handleLoginSuccess} />
       </>
     );
@@ -346,7 +500,7 @@ function App() {
     //this is the main container for the app, it takes up the full height and width of the screen
     <div className="app-container">
       {/* Token Refresh Component */}
-      <TokenRefresh onTokenExpired={handleTokenExpired} />
+      <TokenRefresh onTokenExpired={handleTokenExpired} onTokenRefresh={handleTokenRefresh} />
 
       {/* User Header */}
       <div className="user-header">
@@ -430,22 +584,34 @@ function App() {
           />
           
           {/* Cursor Overlay for remote cursors */}
-          {editorRef.current && awarenessRef.current && (
-            <CursorOverlay
-              editor={editorRef.current}
-              awareness={awarenessRef.current}
-              currentUserId={user.id}
-            />
-          )}
+          {(() => {
+            if (editorRef.current && awarenessRef.current) {
+              console.log('Rendering CursorOverlay with:', {
+                hasEditor: !!editorRef.current,
+                hasAwareness: !!awarenessRef.current,
+                currentUserId: user.id
+              });
+              return (
+                <CursorOverlay
+                  editor={editorRef.current}
+                  awareness={awarenessRef.current}
+                  currentUserId={user.id}
+                />
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
 
       {/* AI Assistant Sidebar */}
-      <AIAssistant
-        currentCode={code}
-        language={currentDocument?.language || 'javascript'}
-        onInsertCode={handleInsertAISuggestion}
-      />
+      <div className="ai-assistant">
+        <AIAssistant
+          currentCode={code}
+          language={currentDocument?.language || 'javascript'}
+          onInsertCode={handleInsertAISuggestion}
+        />
+      </div>
 
       {/* User Presence Sidebar */}
       {awarenessRef.current && (

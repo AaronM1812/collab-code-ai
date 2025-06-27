@@ -12,6 +12,10 @@ import DocumentList from './components/DocumentList';
 import NewDocumentModal from './components/NewDocumentModal';
 //importing the AI assistant component
 import AIAssistant from './components/AIAssistant';
+//importing the UserPresence component
+import UserPresence from './components/UserPresence';
+//importing the CursorOverlay component
+import CursorOverlay from './components/CursorOverlay';
 //importing the api service to handle the api requests
 import { Document, apiService } from './services/api';
 //importing the css file for the app
@@ -44,6 +48,9 @@ function App() {
   const [documentToShare, setDocumentToShare] = useState<Document | null>(null);
   const editorRef = useRef<any>(null);
   const socketRef = useRef<Socket | null>(null);
+  const yjsProviderRef = useRef<WebsocketProvider | null>(null);
+  const awarenessRef = useRef<any>(null);
+  const eventDisposablesRef = useRef<any[]>([]);
 
   //handle login success from AuthPage
   const handleLoginSuccess = (user: any, accessToken: string) => {
@@ -194,40 +201,136 @@ function App() {
   //this is the function to handle the real-time collaboration using yjs and monaco
   useEffect(() => {
     //only run if both the document is loaded and the ediotr is ready
-    if (!currentDocument || !editorRef.current) return;
+    if (!currentDocument || !editorRef.current || !user) return;
 
-    //creating a new yjs document, datastructre for collaboration
-    const ydoc = new Y.Doc();
+    // Wait for the editor model to be available
+    const editor = editorRef.current;
+    const model = editor.getModel();
+    
+    if (!model) {
+      console.log('Editor model not ready yet, waiting...');
+      // Try again after a short delay
+      const timer = setTimeout(() => {
+        // This will trigger the effect again
+      }, 100);
+      return () => clearTimeout(timer);
+    }
 
-    //connecting to the yjs websocket server, using the document id as the room name
-    const provider = new WebsocketProvider('ws://localhost:1234', currentDocument._id, ydoc);
+    let provider: WebsocketProvider;
+    let ydoc: Y.Doc;
+    let monacoBinding: any;
 
-    //getting a shared text type for the code
-    const yText = ydoc.getText('monaco');
+    try {
+      //creating a new yjs document, datastructre for collaboration
+      ydoc = new Y.Doc();
 
-    //binding the monaco editor to yjs
-    const monacoBinding = new MonacoBinding(
-      yText,
-      editorRef.current.getModel(),
-      new Set([editorRef.current]),
-      provider.awareness
-    );
+      //connecting to the yjs websocket server, using the document id as the room name
+      provider = new WebsocketProvider('ws://localhost:1234', currentDocument._id, ydoc);
+      yjsProviderRef.current = provider;
+      awarenessRef.current = provider.awareness;
 
-    //syncing the react state with yjs
-    const updateCodeFromYjs = () => {
+      //getting a shared text type for the code
+      const yText = ydoc.getText('monaco');
+
+      //binding the monaco editor to yjs
+      monacoBinding = new MonacoBinding(
+        yText,
+        model,
+        new Set([editor]),
+        provider.awareness
+      );
+
+      // Set up user awareness
+      const getRandomColor = (username: string) => {
+        const colors = [
+          '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', 
+          '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+          '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
+        ];
+        
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+          hash = username.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+      };
+
+      // Set user information in awareness
+      provider.awareness.setLocalStateField('user', {
+        username: user.username,
+        color: getRandomColor(user.username)
+      });
+
+      // Track cursor position and selection
+      const updateAwareness = () => {
+        if (!editorRef.current) return;
+        
+        const position = editorRef.current.getPosition();
+        const selection = editorRef.current.getSelection();
+        
+        provider.awareness.setLocalStateField('cursor', {
+          lineNumber: position.lineNumber,
+          column: position.column
+        });
+
+        if (selection && !selection.isEmpty()) {
+          provider.awareness.setLocalStateField('selection', {
+            startLineNumber: selection.startLineNumber,
+            startColumn: selection.startColumn,
+            endLineNumber: selection.endLineNumber,
+            endColumn: selection.endColumn
+          });
+        } else {
+          provider.awareness.setLocalStateField('selection', null);
+        }
+      };
+
+      // Listen for cursor and selection changes using disposables
+      const disposables = [];
+      disposables.push(editor.onDidChangeCursorPosition(updateAwareness));
+      disposables.push(editor.onDidChangeCursorSelection(updateAwareness));
+      eventDisposablesRef.current = disposables;
+
+      //syncing the react state with yjs
+      const updateCodeFromYjs = () => {
+        setCode(yText.toString());
+      };
+      yText.observe(updateCodeFromYjs);
+      //setting the initial code
       setCode(yText.toString());
-    };
-    yText.observe(updateCodeFromYjs);
-    //setting the initial code
-    setCode(yText.toString());
+
+    } catch (error) {
+      console.error('Error setting up Yjs collaboration:', error);
+      return;
+    }
 
     //cleaning up when the component unmounts or document/editor changes
     return () => {
-      yText.unobserve(updateCodeFromYjs);
-      provider.destroy();
-      ydoc.destroy();
+      try {
+        // Dispose of all event listeners
+        eventDisposablesRef.current.forEach(disposable => {
+          if (disposable && typeof disposable.dispose === 'function') {
+            disposable.dispose();
+          }
+        });
+        eventDisposablesRef.current = [];
+        
+        if (provider) {
+          provider.destroy();
+        }
+        if (ydoc) {
+          ydoc.destroy();
+        }
+        if (monacoBinding && typeof monacoBinding.destroy === 'function') {
+          monacoBinding.destroy();
+        }
+        yjsProviderRef.current = null;
+        awarenessRef.current = null;
+      } catch (error) {
+        console.error('Error cleaning up Yjs collaboration:', error);
+      }
     };
-  }, [currentDocument, editorRef.current]);
+  }, [currentDocument, editorRef.current, user]);
 
   //now do conditional rendering
   if (!user) {
@@ -297,7 +400,7 @@ function App() {
           </div>
         </div>
 
-        {/* Monaco Editor */}
+        {/* Monaco Editor with Cursor Overlay */}
         <div className="editor-wrapper">
           <MonacoEditor
             height="100%"
@@ -325,6 +428,15 @@ function App() {
               editorRef.current = editor;
             }}
           />
+          
+          {/* Cursor Overlay for remote cursors */}
+          {editorRef.current && awarenessRef.current && (
+            <CursorOverlay
+              editor={editorRef.current}
+              awareness={awarenessRef.current}
+              currentUserId={user.id}
+            />
+          )}
         </div>
       </div>
 
@@ -334,6 +446,19 @@ function App() {
         language={currentDocument?.language || 'javascript'}
         onInsertCode={handleInsertAISuggestion}
       />
+
+      {/* User Presence Sidebar */}
+      {awarenessRef.current && (
+        <div className="presence-sidebar">
+          <UserPresence
+            awareness={awarenessRef.current}
+            currentUser={{
+              id: user.id,
+              username: user.username
+            }}
+          />
+        </div>
+      )}
 
       {/*New Document Modal is the modal to create a new document*/}
       <NewDocumentModal

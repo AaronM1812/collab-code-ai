@@ -47,7 +47,7 @@
 .user-header {
   position: absolute;
   top: 0;
-  right: 400px; /* Adjust for AI Assistant sidebar */
+  right: 600px; /* Adjust for AI Assistant + Presence sidebars */
   z-index: 1000;
   padding: 10px 20px;
   background: rgba(45, 45, 48, 0.9);
@@ -84,7 +84,7 @@
   display: flex;
   flex-direction: column;
   background: #1e1e1e;
-  margin-right: 400px; /* Space for AI Assistant sidebar */
+  margin-right: 600px; /* Space for AI Assistant + Presence sidebars */
 }
 
 .editor-header {
@@ -175,14 +175,49 @@
   padding-top: 0;
 }
 
+/* Presence Sidebar */
+.presence-sidebar {
+  position: fixed;
+  right: 400px; /* Position next to AI Assistant */
+  top: 0;
+  width: 200px;
+  height: 100vh;
+  background: #1e1e1e;
+  border-left: 1px solid #333;
+  padding: 20px;
+  overflow-y: auto;
+  z-index: 999;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
 /* Responsive design */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
   .editor-container {
-    margin-right: 300px;
+    margin-right: 500px;
   }
   
   .user-header {
+    right: 500px;
+  }
+  
+  .presence-sidebar {
     right: 300px;
+    width: 180px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .editor-container {
+    margin-right: 400px;
+  }
+  
+  .user-header {
+    right: 400px;
+  }
+  
+  .presence-sidebar {
+    right: 200px;
+    width: 160px;
   }
 }
 
@@ -198,6 +233,18 @@
   
   .user-header {
     right: 60px; /* Space for collapsed AI Assistant */
+  }
+  
+  .presence-sidebar {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    height: 200px;
+    border-left: none;
+    border-top: 1px solid #333;
+    z-index: 998;
   }
   
   .document-list {

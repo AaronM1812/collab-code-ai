@@ -40,7 +40,6 @@ function App() {
   const [currentDocument, setCurrentDocument] = useState<Document | null>(null);
   const [code, setCode] = useState('// Start coding here!');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [documentToShare, setDocumentToShare] = useState<Document | null>(null);
   const editorRef = useRef<any>(null);
@@ -289,17 +288,6 @@ function App() {
                 >
                   📤 Share
                 </button>
-                {/*AI button is the button to open the AI assistant*/}
-                <button 
-                  //className is the class of the button
-                  className="ai-btn" 
-                  //onClick is the function to handle the click of the button
-                  onClick={() => setIsAIAssistantOpen(true)}
-                  //title is the title of the button
-                  title="Ask AI for help with your code"
-                >
-                  🤖 Ask AI
-                </button>
                 {/*Save button is the button to save the document*/}
                 <button className="save-btn" onClick={saveDocument}>
                   Save
@@ -340,20 +328,18 @@ function App() {
         </div>
       </div>
 
+      {/* AI Assistant Sidebar */}
+      <AIAssistant
+        currentCode={code}
+        language={currentDocument?.language || 'javascript'}
+        onInsertCode={handleInsertAISuggestion}
+      />
+
       {/*New Document Modal is the modal to create a new document*/}
       <NewDocumentModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onDocumentCreated={handleDocumentCreated}
-      />
-
-      {/* AI Assistant Modal is the modal to open the AI assistant*/}
-      {/*this part handles the ai modal using the seperate ai assitant.tsx, it is used throughout the app.tsx*/}
-      <AIAssistant
-        isOpen={isAIAssistantOpen}
-        onClose={() => setIsAIAssistantOpen(false)}
-        code={code}
-        onInsertSuggestion={handleInsertAISuggestion}
       />
 
       {/* Share Document Modal */}

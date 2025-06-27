@@ -47,7 +47,7 @@
 .user-header {
   position: absolute;
   top: 0;
-  right: 0;
+  right: 400px; /* Adjust for AI Assistant sidebar */
   z-index: 1000;
   padding: 10px 20px;
   background: rgba(45, 45, 48, 0.9);
@@ -84,6 +84,7 @@
   display: flex;
   flex-direction: column;
   background: #1e1e1e;
+  margin-right: 400px; /* Space for AI Assistant sidebar */
 }
 
 .editor-header {
@@ -139,13 +140,7 @@
   background: #005a9e;
 }
 
-.editor-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ai-btn {
+.share-btn {
   background: #28a745;
   color: white;
   border: none;
@@ -160,8 +155,14 @@
   gap: 6px;
 }
 
-.ai-btn:hover {
+.share-btn:hover {
   background: #218838;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .editor-wrapper {
@@ -175,9 +176,28 @@
 }
 
 /* Responsive design */
+@media (max-width: 1200px) {
+  .editor-container {
+    margin-right: 300px;
+  }
+  
+  .user-header {
+    right: 300px;
+  }
+}
+
 @media (max-width: 768px) {
   .app-container {
     flex-direction: column;
+  }
+  
+  .editor-container {
+    margin-right: 0;
+    margin-bottom: 60px; /* Space for collapsed AI Assistant */
+  }
+  
+  .user-header {
+    right: 60px; /* Space for collapsed AI Assistant */
   }
   
   .document-list {
@@ -197,11 +217,5 @@
   
   .document-info h2 {
     font-size: 1rem;
-  }
-
-  .user-header {
-    position: relative;
-    border-radius: 0;
-    margin-bottom: 10px;
   }
 }

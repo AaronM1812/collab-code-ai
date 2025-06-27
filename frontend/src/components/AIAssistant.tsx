@@ -1,191 +1,213 @@
 //this is the AI assistant component, it is used to get suggestions from the AI
 
 //importing react and useState, useState is used to manage the state of the component
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 //importing the api service and the AISuggestionRequest interface
 import { apiService, AISuggestionRequest } from '../services/api';
 //importing the css file for the AI assistant
 import './AIAssistant.css';
 
-//this is the interface for the AI assistant props
-interface AIAssistantProps {
-  //controls if the modal is visible
-  isOpen: boolean;
-  //closes the modal
-  onClose: () => void;
-  //current code in the editor
-  code: string;
-  //optional function to insert the suggestion into the editor
-  onInsertSuggestion?: (suggestion: string) => void;
+interface Message {
+  id: string;
+  type: 'user' | 'ai';
+  content: string;
+  timestamp: Date;
+  codeContext?: string;
 }
 
-const AIAssistant: React.FC<AIAssistantProps> = ({ 
-  isOpen, 
-  onClose, 
-  code, 
-  onInsertSuggestion 
-}) => {
-  //state variables for user prompt, ai suggestion, loading state, and error message
-  const [prompt, setPrompt] = useState('');
-  const [suggestion, setSuggestion] = useState('');
-  //loading state is used to show a loading spinner
-  const [loading, setLoading] = useState(false);
-  //error state is used to show an error message
-  const [error, setError] = useState('');
+interface AIAssistantProps {
+  currentCode: string;
+  language: string;
+  onInsertCode: (code: string) => void;
+}
 
-  //this is the function to handle the submission of the user prompt
-  const handleSubmit = async (e: React.FormEvent) => {
-    //prevent the default form submission behavior
-    e.preventDefault();
-    //if the prompt is empty, return
-    if (!prompt.trim()) return;
-    //set the loading state to true
-    setLoading(true);
-    //set the error state to empty
-    setError('');
-    //set the suggestion state to empty
-    setSuggestion('');
+const AIAssistant: React.FC<AIAssistantProps> = ({ currentCode, language, onInsertCode }) => {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      type: 'ai',
+      content: 'Hello! I\'m your AI pair programmer. I can help you with code suggestions, explanations, debugging, and more. What would you like to work on?',
+      timestamp: new Date()
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: inputValue,
+      timestamp: new Date(),
+      codeContext: currentCode
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
 
     try {
-      //create a new request object with the code and prompt
-      const request: AISuggestionRequest = {
-        //code is the current code in the editor
-        code,
-        //prompt is the user prompt
-        prompt: prompt.trim()
+      const response = await fetch('http://localhost:3001/api/ai/suggest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          prompt: inputValue,
+          code: currentCode,
+          language: language
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const data = await response.json();
+      
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: data.suggestion,
+        timestamp: new Date()
       };
 
-      //call the api service to get the AI suggestion
-      const response = await apiService.getAISuggestion(request);
-      //set the suggestion state to the AI's response
-      setSuggestion(response.suggestion);
-      //if the response is not successful, set the error state to a message
-    } catch (err) {
-      //if the response is not successful, set the error state to a message
-      setError('Failed to get AI suggestion. Please try again.');
-      //log the error
-      console.error('AI suggestion error:', err);
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('AI request failed:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
-      //set the loading state to fals
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  //this is the function to handle the insertion of the AI suggestion into the editor
-  const handleInsertSuggestion = () => {
-    //if the suggestion is not empty and the onInsertSuggestion function is defined
-    if (suggestion && onInsertSuggestion) {
-      //call the onInsertSuggestion function with the suggestion
-      onInsertSuggestion(suggestion);
-      //close the modal
-      onClose();
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
-  //this is the function to handle the closing of the modal
-  const handleClose = () => {
-    //set the prompt state to empty
-    setPrompt('');
-    //set the suggestion state to empty
-    setSuggestion('');
-    //set the error state to empty
-    setError('');
-    //close the modal
-    onClose();
+  const handleInsertCode = (code: string) => {
+    onInsertCode(code);
   };
 
-  //if the modal is not open, return null
-  if (!isOpen) return null;
+  const quickPrompts = [
+    'Explain this code',
+    'Find bugs in this code',
+    'Optimize this code',
+    'Add comments',
+    'Refactor this code',
+    'Suggest improvements'
+  ];
 
-  //return the modal
   return (
-    //overlay is the background of the modal
-    <div className="ai-assistant-overlay" onClick={handleClose}>
-      {/*modal is the main container of the modal*/}
-      <div className="ai-assistant-modal" onClick={(e) => e.stopPropagation()}>
-        {/*header is the top of the modal*/}
-        <div className="ai-assistant-header">
-          {/*title of the modal*/}
-          <h3>AI Code Assistant</h3>
-          {/*close button is the button to close the modal*/}
-          <button className="ai-assistant-close" onClick={handleClose}>
-            {/*x is the close button*/}
-            ×
-          </button>
+    <div className={`ai-assistant ${isCollapsed ? 'collapsed' : ''}`}>
+      <div className="ai-header" onClick={() => setIsCollapsed(!isCollapsed)}>
+        <div className="ai-header-content">
+          <div className="ai-icon">🤖</div>
+          <span className="ai-title">AI Assistant</span>
         </div>
-
-        {/*form is the form to submit the user prompt*/}
-        <form onSubmit={handleSubmit} className="ai-assistant-form">
-          {/*input group is the group of input fields*/}
-          <div className="ai-assistant-input-group">
-            {/*label is the label for the input field*/}
-            <label htmlFor="prompt">Ask AI about your code:</label>
-            {/*textarea is the input field for the user prompt*/}
-            <textarea
-              //id is the id of the input field
-              id="prompt"
-              //value is the value of the input field
-              value={prompt}
-              //onChange is the function to handle the change of the input field
-              onChange={(e) => setPrompt(e.target.value)}
-              //placeholder is the placeholder text for the input field
-              placeholder="e.g., 'Suggest improvements', 'Explain this code', 'Fix this bug'"
-              //rows is the number of rows in the textarea
-              rows={3}
-              //disabled is the state of the input field
-              disabled={loading}
-            />
-          </div>
-
-          {/*submit button is the button to submit the user prompt*/}
-          <button 
-            //type is the type of the button
-            type="submit" 
-            //className is the class of the button
-            className="ai-assistant-submit"
-            //disabled is the state of the button
-            disabled={loading || !prompt.trim()}
-          >
-            {/*if the loading state is true, show 'Getting suggestion...'*/}
-            {loading ? 'Getting suggestion...' : 'Ask AI'}
-          </button>
-        </form>
-
-        {/*if the error state is not empty, show the error message*/}
-        {error && (
-          //error message is the error message to show
-          <div className="ai-assistant-error">
-            {/*error message is the error message to show*/}
-            {error}
-          </div>
-        )}
-
-        {/*if the suggestion state is not empty, show the suggestion*/}
-        {suggestion && (
-          //suggestion is the suggestion to show
-          <div className="ai-assistant-response">
-            {/*AI Suggestion is the title of the suggestion*/}
-            <h4>AI Suggestion:</h4>
-            {/*ai-assistant-suggestion is the container for the suggestion*/}
-            <div className="ai-assistant-suggestion">
-              <pre>{suggestion}</pre>
-            </div>
-            {/*if the onInsertSuggestion function is defined, show the insert button*/}
-            {onInsertSuggestion && (
-              //insert button is the button to insert the suggestion into the editor
-              <button 
-                //onClick is the function to handle the click of the button
-                onClick={handleInsertSuggestion}
-                //className is the class of the button
-                className="ai-assistant-insert"
-              >
-                {/*insert into editor is the text of the button*/}
-                Insert into Editor
-              </button>
-            )}
-          </div>
-        )}
+        <button className="collapse-btn">
+          {isCollapsed ? '◀' : '▶'}
+        </button>
       </div>
+
+      {!isCollapsed && (
+        <>
+          <div className="ai-messages">
+            {messages.map((message) => (
+              <div key={message.id} className={`message ${message.type}`}>
+                <div className="message-content">
+                  {message.content}
+                  {message.type === 'ai' && message.content.includes('```') && (
+                    <div className="message-actions">
+                      <button 
+                        className="insert-btn"
+                        onClick={() => {
+                          const codeMatch = message.content.match(/```[\s\S]*?```/);
+                          if (codeMatch) {
+                            const code = codeMatch[0].replace(/```/g, '');
+                            handleInsertCode(code);
+                          }
+                        }}
+                      >
+                        Insert Code
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <div className="message-timestamp">
+                  {message.timestamp.toLocaleTimeString()}
+                </div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="message ai">
+                <div className="message-content">
+                  <div className="typing-indicator">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <div className="quick-prompts">
+            {quickPrompts.map((prompt, index) => (
+              <button
+                key={index}
+                className="quick-prompt-btn"
+                onClick={() => setInputValue(prompt)}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+
+          <div className="ai-input">
+            <textarea
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask me about your code..."
+              disabled={isLoading}
+              rows={2}
+            />
+            <button 
+              className="send-btn"
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isLoading}
+            >
+              {isLoading ? '⏳' : '➤'}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

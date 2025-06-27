@@ -56,46 +56,66 @@ export interface AuthResponse {
 
 //this is the API service class
 class ApiService {
+  // Helper method to get auth headers
+  private getAuthHeaders() {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
+
   //get all documents
   async getDocuments(): Promise<Document[]> {
-    const response = await axios.get(`${API_BASE_URL}/documents`);
+    const response = await axios.get(`${API_BASE_URL}/documents`, {
+      headers: this.getAuthHeaders()
+    });
     return response.data;
   }
 
   //get document by id
   async getDocument(id: string): Promise<Document> {
-    const response = await axios.get(`${API_BASE_URL}/documents/${id}`);
+    const response = await axios.get(`${API_BASE_URL}/documents/${id}`, {
+      headers: this.getAuthHeaders()
+    });
     return response.data;
   }
 
   //create new document
   async createDocument(data: CreateDocumentData): Promise<Document> {
-    const response = await axios.post(`${API_BASE_URL}/documents`, data);
+    const response = await axios.post(`${API_BASE_URL}/documents`, data, {
+      headers: this.getAuthHeaders()
+    });
     return response.data;
   }
 
   //update document
   async updateDocument(id: string, data: UpdateDocumentData): Promise<Document> {
-    const response = await axios.put(`${API_BASE_URL}/documents/${id}`, data);
+    const response = await axios.put(`${API_BASE_URL}/documents/${id}`, data, {
+      headers: this.getAuthHeaders()
+    });
     return response.data;
   }
 
   //delete document
   async deleteDocument(id: string): Promise<{ message: string }> {
-    const response = await axios.delete(`${API_BASE_URL}/documents/${id}`);
+    const response = await axios.delete(`${API_BASE_URL}/documents/${id}`, {
+      headers: this.getAuthHeaders()
+    });
     return response.data;
   }
 
   //search documents by name
   async searchDocuments(query: string): Promise<Document[]> {
-    const response = await axios.get(`${API_BASE_URL}/documents/search/${query}`);
+    const response = await axios.get(`${API_BASE_URL}/documents/search/${query}`, {
+      headers: this.getAuthHeaders()
+    });
     return response.data;
   }
 
   //get AI suggestion for code
   async getAISuggestion(data: AISuggestionRequest): Promise<AISuggestionResponse> {
     //post request to the AI route with code and prompt
-    const response = await axios.post(`${API_BASE_URL}/ai/suggest`, data);
+    const response = await axios.post(`${API_BASE_URL}/ai/suggest`, data, {
+      headers: this.getAuthHeaders()
+    });
     //send the response to the frontend
     return response.data;
   }

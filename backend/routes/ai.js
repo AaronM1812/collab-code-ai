@@ -6,6 +6,11 @@ const express = require('express');
 const router = express.Router();
 //importing the openai api
 const OpenAI = require('openai');
+//importing the authentication middleware
+const authMiddleware = require('../middleware/auth');
+
+// Apply authentication middleware to all AI routes
+router.use(authMiddleware);
 
 //load API key from environment, stored in env file
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });

@@ -44,6 +44,41 @@
   overflow: hidden;
 }
 
+.user-header {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 10px 20px;
+  background: rgba(45, 45, 48, 0.9);
+  backdrop-filter: blur(10px);
+  border-bottom-left-radius: 8px;
+  color: white;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+}
+
+.logout-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.logout-btn:hover {
+  background: #c82333;
+}
+
 .editor-container {
   flex: 1;
   display: flex;
@@ -162,5 +197,11 @@
   
   .document-info h2 {
     font-size: 1rem;
+  }
+
+  .user-header {
+    position: relative;
+    border-radius: 0;
+    margin-bottom: 10px;
   }
 }

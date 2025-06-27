@@ -5,6 +5,7 @@ class Document {
     this.name = data.name || '';
     this.content = data.content || '// Start coding here!';
     this.language = data.language || 'javascript';
+    this.userId = data.userId || null;
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
   }
@@ -25,7 +26,13 @@ class Document {
     return await db.collection('documents').findOne({ _id: id });
   }
 
-  //find all documents
+  //find all documents for a specific user
+  static async findAllByUser(db, userId) {
+    //find all documents for the user
+    return await db.collection('documents').find({ userId: userId }).toArray();
+  }
+
+  //find all documents (for admin purposes, or remove this method)
   static async findAll(db) {
     //find all documents
     return await db.collection('documents').find({}).toArray();
@@ -50,7 +57,16 @@ class Document {
     return await db.collection('documents').deleteOne({ _id: id });
   }
 
-  //find documets by name (for searching)
+  //find documents by name for a specific user
+  static async findByNameAndUser(db, name, userId) {
+    //find the documents by the name and user
+    return await db.collection('documents').find({
+      name: { $regex: name, $options: 'i' },
+      userId: userId
+    }).toArray();
+  }
+
+  //find documets by name (for searching) - keep for backward compatibility
   static async findByName(db, name) {
     //find the documents by the name
     return await db.collection('documents').find({

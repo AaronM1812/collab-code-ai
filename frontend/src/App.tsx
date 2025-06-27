@@ -40,6 +40,19 @@ function App() {
   const editorRef = useRef<any>(null);
   const socketRef = useRef<Socket | null>(null);
 
+  //handle login success from AuthPage
+  const handleLoginSuccess = (user: any, token: string) => {
+    setUser(user);
+  };
+
+  //handle logout
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
+
+  //use effect to connect to the backend socket.io server
   useEffect(() => {
     socketRef.current = io('http://localhost:3001');
     socketRef.current.on('connect', () => {
@@ -50,15 +63,15 @@ function App() {
     };
   }, []);
 
-  // Function to handle document selection
+  //function to handle document selection
   const handleDocumentSelect = async (document: Document) => {
     try {
-      // Load the full document from the API
+      //load the full document from the API
       const fullDocument = await apiService.getDocument(document._id);
       setCurrentDocument(fullDocument);
       setCode(fullDocument.content);
       
-      // Join the document room for real-time collaboration
+      //join the document room for real-time collaboration
       if (socketRef.current) {
         socketRef.current.emit('join-document', document._id);
         console.log('Joined document room:', document._id);
@@ -68,24 +81,24 @@ function App() {
     }
   };
 
-  // Function to handle new document creation
+  //function to handle new document creation
   const handleNewDocument = () => {
     setIsModalOpen(true);
   };
 
-  // Function to handle document creation from modal
+  //function to handle document creation from modal
   const handleDocumentCreated = (newDocument: Document) => {
     setCurrentDocument(newDocument);
     setCode(newDocument.content);
     
-    // Join the new document room
+    //join the new document room
     if (socketRef.current) {
       socketRef.current.emit('join-document', newDocument._id);
       console.log('Joined new document room:', newDocument._id);
     }
   };
 
-  // Function to save document changes
+  //function to save document changes
   const saveDocument = async () => {
     if (!currentDocument) return;
 
@@ -100,13 +113,13 @@ function App() {
     }
   };
 
-  // Auto-save functionality
+  //auto-save functionality
   useEffect(() => {
     if (!currentDocument) return;
 
     const autoSaveTimer = setTimeout(() => {
       saveDocument();
-    }, 2000); // Auto-save after 2 seconds of inactivity
+    }, 2000);
 
     return () => clearTimeout(autoSaveTimer);
   }, [code, currentDocument]);
@@ -190,14 +203,22 @@ function App() {
     };
   }, [currentDocument, editorRef.current]);
 
-  // Now do conditional rendering
+  //now do conditional rendering
   if (!user) {
-    return <AuthPage />;
+    return <AuthPage onLoginSuccess={handleLoginSuccess} />;
   }
 
   return (
     //this is the main container for the app, it takes up the full height and width of the screen
     <div className="app-container">
+      {/* User Header */}
+      <div className="user-header">
+        <div className="user-info">
+          <span>Welcome, {user.username}!</span>
+          <button onClick={handleLogout} className="logout-btn">Logout</button>
+        </div>
+      </div>
+
       {/* Document List Sidebar */}
       <DocumentList
         onDocumentSelect={handleDocumentSelect}

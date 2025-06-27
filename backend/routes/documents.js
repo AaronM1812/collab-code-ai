@@ -6,15 +6,20 @@ const express = require('express');
 const { ObjectId } = require('mongodb');
 //importing the document model from models folder
 const Document = require('../models/Document');
+//importing the authentication middleware
+const authMiddleware = require('../middleware/auth');
 //creating a router
 const router = express.Router();
 
-//get all documents route
+// Apply authentication middleware to all document routes
+router.use(authMiddleware);
+
+//get all documents route (now user-specific)
 router.get('/', async (req, res) => {
   try {
     const db = req.app.locals.db;
-    //function call to find all documents form document model
-    const documents = await Document.findAll(db);
+    //function call to find all documents for the current user
+    const documents = await Document.findAllByUser(db, req.user.userId);
     //res used to send data to the frontend
     res.json(documents);
   } catch (error) {
@@ -23,7 +28,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-//get document by id route
+//get document by id route (with user ownership check)
 router.get('/:id', async (req, res) => {
   try {
     const db = req.app.locals.db;
@@ -33,6 +38,11 @@ router.get('/:id', async (req, res) => {
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
     }
+
+    // Check if the document belongs to the current user
+    if (document.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
     
     res.json(document);
   } catch (error) {
@@ -41,7 +51,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-//create new document route
+//create new document route (now includes userId)
 router.post('/', async (req, res) => {
   try {
     //destructure the request body
@@ -57,7 +67,8 @@ router.post('/', async (req, res) => {
     const document = await Document.create(db, {
       name,
       content: content || '// Start coding here!',
-      language: language || 'javascript'
+      language: language || 'javascript',
+      userId: req.user.userId // Add the current user's ID
     });
     
     //send the created document to the frontend
@@ -68,13 +79,23 @@ router.post('/', async (req, res) => {
   }
 });
 
-//update document route
+//update document route (with user ownership check)
 router.put('/:id', async (req, res) => {
   try {
     //destructure the request body
     const { name, content, language } = req.body;
     //get the database reference from the request
     const db = req.app.locals.db;
+
+    // First check if the document exists and belongs to the user
+    const existingDocument = await Document.findById(db, new ObjectId(req.params.id));
+    if (!existingDocument) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    if (existingDocument.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     //function call to update the document by the id form document model
     const updateData = {};
     if (name !== undefined) updateData.name = name;
@@ -98,11 +119,21 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-//delete document route
+//delete document route (with user ownership check)
 router.delete('/:id', async (req, res) => {
   try {
     //get the database reference from the request
     const db = req.app.locals.db;
+
+    // First check if the document exists and belongs to the user
+    const existingDocument = await Document.findById(db, new ObjectId(req.params.id));
+    if (!existingDocument) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+    if (existingDocument.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     //function call to delete the document by the id form document model
     const result = await Document.deleteById(db, new ObjectId(req.params.id));
     
@@ -119,12 +150,12 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-//search documents by name route
+//search documents by name route (now user-specific)
 router.get('/search/:query', async (req, res) => {
   try {
     const db = req.app.locals.db;
-    //function call to find the documents by the name form document model
-    const documents = await Document.findByName(db, req.params.query);
+    //function call to find the documents by the name for the current user
+    const documents = await Document.findByNameAndUser(db, req.params.query, req.user.userId);
     res.json(documents);
   } catch (error) {
     console.error('Error searching documents:', error);

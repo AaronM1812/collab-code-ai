@@ -14,6 +14,7 @@ const { MongoClient } = require('mongodb');
 //import the document routes
 const documentRoutes = require('./routes/documents');
 const aiRoutes = require('./routes/ai');
+const authRoutes = require('./routes/auth');
 
 //creates the server
 const app = express();
@@ -55,6 +56,8 @@ app.get('/', (req, res) => {
 app.use('/api/documents', documentRoutes);
 //ai routes
 app.use('/api/ai', aiRoutes);
+//auth routes
+app.use('/api/auth', authRoutes);
 
 // Start server
 //tells app to start listening on the port

@@ -20,6 +20,8 @@ import './App.css';
 import AuthPage from './components/AuthPage';
 //importing TokenRefresh for automatic token management
 import TokenRefresh from './components/TokenRefresh';
+//importing ShareDocumentModal for document sharing
+import ShareDocumentModal from './components/ShareDocumentModal';
 
 //importing yjs and the websocket provider for real-time collaboration instead of socket.io
 import * as Y from 'yjs';
@@ -39,6 +41,8 @@ function App() {
   const [code, setCode] = useState('// Start coding here!');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [documentToShare, setDocumentToShare] = useState<Document | null>(null);
   const editorRef = useRef<any>(null);
   const socketRef = useRef<Socket | null>(null);
 
@@ -67,6 +71,12 @@ function App() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+  };
+
+  //handle share document
+  const handleShareDocument = (document: Document) => {
+    setDocumentToShare(document);
+    setIsShareModalOpen(true);
   };
 
   //use effect to connect to the backend socket.io server
@@ -248,6 +258,7 @@ function App() {
       <DocumentList
         onDocumentSelect={handleDocumentSelect}
         onNewDocument={handleNewDocument}
+        onShareDocument={handleShareDocument}
       />
 
       {/* Main Editor Area */}
@@ -270,6 +281,14 @@ function App() {
             {/*if the current document is not null, show the editor actions*/}
             {currentDocument && (
               <>
+                {/*Share button for document sharing*/}
+                <button 
+                  className="share-btn" 
+                  onClick={() => handleShareDocument(currentDocument)}
+                  title="Share document"
+                >
+                  📤 Share
+                </button>
                 {/*AI button is the button to open the AI assistant*/}
                 <button 
                   //className is the class of the button
@@ -321,7 +340,6 @@ function App() {
         </div>
       </div>
 
-
       {/*New Document Modal is the modal to create a new document*/}
       <NewDocumentModal
         isOpen={isModalOpen}
@@ -336,6 +354,17 @@ function App() {
         onClose={() => setIsAIAssistantOpen(false)}
         code={code}
         onInsertSuggestion={handleInsertAISuggestion}
+      />
+
+      {/* Share Document Modal */}
+      <ShareDocumentModal
+        isOpen={isShareModalOpen}
+        onClose={() => {
+          setIsShareModalOpen(false);
+          setDocumentToShare(null);
+        }}
+        documentId={documentToShare?._id || ''}
+        documentName={documentToShare?.name || ''}
       />
     </div>
   );

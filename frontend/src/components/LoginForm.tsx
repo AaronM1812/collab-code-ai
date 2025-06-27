@@ -7,7 +7,7 @@ import { apiService, LoginData, AuthResponse } from '../services/api';
 
 //this is the interface for the login form props
 interface LoginFormProps {
-  onLoginSuccess?: (user: AuthResponse['user'], token: string) => void;
+  onLoginSuccess?: (user: AuthResponse['user'], accessToken: string) => void;
   onSwitchToRegister?: () => void;
 }
 
@@ -34,9 +34,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchToRegiste
       //send the form data to the backend
       const response = await apiService.loginUser(form);
       //store the jwt and user info in localStorage
-      localStorage.setItem('token', response.token);
+      localStorage.setItem('accessToken', response.accessToken);
+      localStorage.setItem('refreshToken', response.refreshToken);
       localStorage.setItem('user', JSON.stringify(response.user));
-      if (onLoginSuccess) onLoginSuccess(response.user, response.token);
+      if (onLoginSuccess) onLoginSuccess(response.user, response.accessToken);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Login failed.');
     } finally {

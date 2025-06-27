@@ -18,6 +18,8 @@ import { Document, apiService } from './services/api';
 import './App.css';
 //importing AuthPage
 import AuthPage from './components/AuthPage';
+//importing TokenRefresh for automatic token management
+import TokenRefresh from './components/TokenRefresh';
 
 //importing yjs and the websocket provider for real-time collaboration instead of socket.io
 import * as Y from 'yjs';
@@ -41,14 +43,29 @@ function App() {
   const socketRef = useRef<Socket | null>(null);
 
   //handle login success from AuthPage
-  const handleLoginSuccess = (user: any, token: string) => {
+  const handleLoginSuccess = (user: any, accessToken: string) => {
     setUser(user);
   };
 
   //handle logout
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await apiService.logoutUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+    }
+  };
+
+  //handle token expiration
+  const handleTokenExpired = () => {
     setUser(null);
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
   };
 
@@ -205,12 +222,20 @@ function App() {
 
   //now do conditional rendering
   if (!user) {
-    return <AuthPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <>
+        <TokenRefresh onTokenExpired={handleTokenExpired} />
+        <AuthPage onLoginSuccess={handleLoginSuccess} />
+      </>
+    );
   }
 
   return (
     //this is the main container for the app, it takes up the full height and width of the screen
     <div className="app-container">
+      {/* Token Refresh Component */}
+      <TokenRefresh onTokenExpired={handleTokenExpired} />
+
       {/* User Header */}
       <div className="user-header">
         <div className="user-info">

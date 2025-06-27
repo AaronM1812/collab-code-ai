@@ -1,17 +1,76 @@
-//this file will define the structure of a user in the database
+// User model using native MongoDB driver
 
-//importing mongoose, a library for interacting with mongodb
-const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
-//defining the schema for the user
-const userSchema = new mongoose.Schema({
-  //username is a string and is required and unique
-  username: { type: String, required: true, unique: true },
-  //email is a string and is required and unique
-  email:    { type: String, required: true, unique: true },
-  //password is a string and is required, it is also hased, timestamps will add createdAt and updatedAt fields to the schema
-  password: { type: String, required: true },
-}, { timestamps: true });
+class User {
+  // Create a new user
+  static async create(db, userData) {
+    const { username, email, password } = userData;
+    
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const user = {
+      username,
+      email,
+      password: hashedPassword,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    
+    const result = await db.collection('users').insertOne(user);
+    return { ...user, _id: result.insertedId };
+  }
 
-//defining the model for the user
-module.exports = mongoose.model('User', userSchema); 
+  // Find user by email
+  static async findByEmail(db, email) {
+    return await db.collection('users').findOne({ email });
+  }
+
+  // Find user by username
+  static async findByUsername(db, username) {
+    return await db.collection('users').findOne({ username });
+  }
+
+  // Find user by ID
+  static async findById(db, userId) {
+    return await db.collection('users').findOne({ _id: userId });
+  }
+
+  // Check if email exists
+  static async emailExists(db, email) {
+    const user = await db.collection('users').findOne({ email });
+    return !!user;
+  }
+
+  // Check if username exists
+  static async usernameExists(db, username) {
+    const user = await db.collection('users').findOne({ username });
+    return !!user;
+  }
+
+  // Update user
+  static async updateById(db, userId, updateData) {
+    const update = {
+      ...updateData,
+      updatedAt: new Date()
+    };
+    
+    return await db.collection('users').updateOne(
+      { _id: userId },
+      { $set: update }
+    );
+  }
+
+  // Delete user
+  static async deleteById(db, userId) {
+    return await db.collection('users').deleteOne({ _id: userId });
+  }
+
+  // Compare password
+  static async comparePassword(password, hashedPassword) {
+    return await bcrypt.compare(password, hashedPassword);
+  }
+}
+
+module.exports = User; 

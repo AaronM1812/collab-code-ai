@@ -3,7 +3,6 @@
 const express = require('express');
 const { ObjectId } = require('mongodb');
 const Document = require('../models/Document');
-const User = require('../models/User');
 const authMiddleware = require('../middleware/auth');
 const router = express.Router();
 
@@ -14,7 +13,7 @@ router.use(authMiddleware);
 router.get('/users', async (req, res) => {
   try {
     const db = req.app.locals.db;
-    const users = await User.find({}).select('username email').exec();
+    const users = await db.collection('users').find({}, { projection: { username: 1, email: 1 } }).toArray();
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -36,7 +35,7 @@ router.post('/share/:documentId', async (req, res) => {
     }
 
     // Find the user to share with
-    const userToShareWith = await User.findOne({ email }).exec();
+    const userToShareWith = await db.collection('users').findOne({ email });
     if (!userToShareWith) {
       return res.status(404).json({ error: 'User not found' });
     }

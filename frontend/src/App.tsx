@@ -17,6 +17,12 @@ import { Document, apiService } from './services/api';
 //importing the css file for the app
 import './App.css';
 
+//importing yjs and the websocket provider for real-time collaboration instead of socket.io
+import * as Y from 'yjs';
+//websocket connects app to the Yjs websocket server
+import { WebsocketProvider } from 'y-websocket';
+//monaco binding to sunc the editor with yjs for real time code collab
+import { MonacoBinding } from 'y-monaco';
 
 //main app components which will return the UI that will be shown in the browser
 function App() {
@@ -34,22 +40,13 @@ function App() {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    // Connect to backend socket.io server
+    // Connect to backend socket.io server (keep for presence/chat if needed)
     socketRef.current = io('http://localhost:3001');
 
-    // When connected, log a message
     socketRef.current.on('connect', () => {
       console.log('Connected to backend with socket id:', socketRef.current?.id);
     });
 
-    // Listen for code updates from other users
-    socketRef.current.on('code-update', (data) => {
-      console.log('Received code update from user:', data.userId);
-      console.log('Received code:', data.code);
-      setCode(data.code);
-    });
-
-    // Cleanup on unmount
     return () => {
       socketRef.current?.disconnect();
     };
@@ -157,6 +154,44 @@ function App() {
     }
   };
 
+  //this is the function to handle the real-time collaboration using yjs and monaco
+  useEffect(() => {
+    //only run if both the document is loaded and the ediotr is ready
+    if (!currentDocument || !editorRef.current) return;
+
+    //creating a new yjs document, datastructre for collaboration
+    const ydoc = new Y.Doc();
+
+    //connecting to the yjs websocket server, using the document id as the room name
+    const provider = new WebsocketProvider('ws://localhost:1234', currentDocument._id, ydoc);
+
+    //getting a shared text type for the code
+    const yText = ydoc.getText('monaco');
+
+    //binding the monaco editor to yjs
+    const monacoBinding = new MonacoBinding(
+      yText,
+      editorRef.current.getModel(),
+      new Set([editorRef.current]),
+      provider.awareness
+    );
+
+    //syncing the react state with yjs
+    const updateCodeFromYjs = () => {
+      setCode(yText.toString());
+    };
+    yText.observe(updateCodeFromYjs);
+    //setting the initial code
+    setCode(yText.toString());
+
+    //cleaning up when the component unmounts or document/editor changes
+    return () => {
+      yText.unobserve(updateCodeFromYjs);
+      provider.destroy();
+      ydoc.destroy();
+    };
+  }, [currentDocument, editorRef.current]);
+
   return (
     //this is the main container for the app, it takes up the full height and width of the screen
     <div className="app-container">
@@ -223,18 +258,13 @@ function App() {
               readOnly: false,
               cursorStyle: 'line',
             }}
+            //now only updates the local react state
             onChange={(value) => {
               if (value !== undefined) {
                 setCode(value);
-                // Send code changes to backend for real-time sync
-                if (socketRef.current && currentDocument) {
-                  socketRef.current.emit('code-change', {
-                    documentId: currentDocument._id,
-                    code: value
-                  });
-                }
               }
             }}
+            //saves a reference to the monoco editor so yjs can bind to it
             onMount={(editor) => {
               editorRef.current = editor;
             }}

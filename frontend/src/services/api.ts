@@ -7,8 +7,20 @@ export interface Document {
   name: string;
   content: string;
   language: string;
+  userId: string;
+  owner: string;
+  collaborators: Collaborator[];
+  isPublic: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface Collaborator {
+  userId: string;
+  username: string;
+  email: string;
+  permission: 'read' | 'write';
+  addedAt: string;
 }
 
 export interface CreateDocumentData {
@@ -21,6 +33,17 @@ export interface UpdateDocumentData {
   name?: string;
   content?: string;
   language?: string;
+}
+
+export interface ShareDocumentData {
+  email: string;
+  permission: 'read' | 'write';
+}
+
+export interface User {
+  _id: string;
+  username: string;
+  email: string;
 }
 
 //this is the structure of the request to the AI, defines the shape of the data sent to and recieved from the backend for AI suggestions, helps to catch mistakes and gives autocomplete
@@ -270,6 +293,93 @@ class ApiService {
     } catch (error) {
       // Even if logout fails, clear local storage
       return { message: 'Logged out successfully' };
+    }
+  }
+
+  // Collaboration methods
+
+  //get all users (for sharing)
+  async getUsers(): Promise<User[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/collaboration/users`, {
+        headers: this.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
+  }
+
+  //share document with user
+  async shareDocument(documentId: string, data: ShareDocumentData): Promise<{ message: string }> {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/collaboration/share/${documentId}`, data, {
+        headers: this.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
+  }
+
+  //remove collaborator from document
+  async removeCollaborator(documentId: string, userId: string): Promise<{ message: string }> {
+    try {
+      const response = await axios.delete(`${API_BASE_URL}/collaboration/share/${documentId}/${userId}`, {
+        headers: this.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
+  }
+
+  //update collaborator permission
+  async updateCollaboratorPermission(documentId: string, userId: string, permission: 'read' | 'write'): Promise<{ message: string }> {
+    try {
+      const response = await axios.put(`${API_BASE_URL}/collaboration/share/${documentId}/${userId}/permission`, 
+        { permission }, 
+        { headers: this.getAuthHeaders() }
+      );
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
+  }
+
+  //get document collaborators
+  async getDocumentCollaborators(documentId: string): Promise<Collaborator[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/collaboration/share/${documentId}/collaborators`, {
+        headers: this.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
+  }
+
+  //get shared documents (documents shared with current user)
+  async getSharedDocuments(): Promise<Document[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/collaboration/shared`, {
+        headers: this.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
+    }
+  }
+
+  //get owned documents
+  async getOwnedDocuments(): Promise<Document[]> {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/collaboration/owned`, {
+        headers: this.getAuthHeaders()
+      });
+      return response.data;
+    } catch (error) {
+      return this.handleAuthError(error);
     }
   }
 }

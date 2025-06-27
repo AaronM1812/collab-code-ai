@@ -32,16 +32,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const db = req.app.locals.db;
+    const documentId = new ObjectId(req.params.id);
+    
+    // Check user access to this document
+    const accessCheck = await Document.checkUserAccess(db, documentId, req.user.userId);
+    if (!accessCheck || !accessCheck.access) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+    
     //function call to find the document by the id form document model
-    const document = await Document.findById(db, new ObjectId(req.params.id));
+    const document = await Document.findById(db, documentId);
     
     if (!document) {
       return res.status(404).json({ error: 'Document not found' });
-    }
-
-    // Check if the document belongs to the current user
-    if (document.userId !== req.user.userId) {
-      return res.status(403).json({ error: 'Access denied' });
     }
     
     res.json(document);
@@ -68,7 +71,8 @@ router.post('/', async (req, res) => {
       name,
       content: content || '// Start coding here!',
       language: language || 'javascript',
-      userId: req.user.userId // Add the current user's ID
+      userId: req.user.userId, // Add the current user's ID
+      owner: req.user.username // Add the owner name
     });
     
     //send the created document to the frontend
@@ -86,14 +90,17 @@ router.put('/:id', async (req, res) => {
     const { name, content, language } = req.body;
     //get the database reference from the request
     const db = req.app.locals.db;
+    const documentId = new ObjectId(req.params.id);
 
-    // First check if the document exists and belongs to the user
-    const existingDocument = await Document.findById(db, new ObjectId(req.params.id));
-    if (!existingDocument) {
-      return res.status(404).json({ error: 'Document not found' });
-    }
-    if (existingDocument.userId !== req.user.userId) {
+    // Check user access and permissions
+    const accessCheck = await Document.checkUserAccess(db, documentId, req.user.userId);
+    if (!accessCheck || !accessCheck.access) {
       return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Only allow write operations if user has write permission or is owner
+    if (accessCheck.permission === 'read' && accessCheck.permission !== 'owner') {
+      return res.status(403).json({ error: 'Read-only access' });
     }
 
     //function call to update the document by the id form document model
@@ -103,7 +110,7 @@ router.put('/:id', async (req, res) => {
     if (language !== undefined) updateData.language = language;
     
     //function call to update the document by the id form document model
-    const result = await Document.updateById(db, new ObjectId(req.params.id), updateData);
+    const result = await Document.updateById(db, documentId, updateData);
     
     //if no document found, return an error
     if (result.matchedCount === 0) {
@@ -111,7 +118,7 @@ router.put('/:id', async (req, res) => {
     }
     
     //function call to find the updated document by the id form document model
-    const updatedDocument = await Document.findById(db, new ObjectId(req.params.id));
+    const updatedDocument = await Document.findById(db, documentId);
     res.json(updatedDocument);
   } catch (error) {
     console.error('Error updating document:', error);
@@ -124,18 +131,16 @@ router.delete('/:id', async (req, res) => {
   try {
     //get the database reference from the request
     const db = req.app.locals.db;
+    const documentId = new ObjectId(req.params.id);
 
-    // First check if the document exists and belongs to the user
-    const existingDocument = await Document.findById(db, new ObjectId(req.params.id));
-    if (!existingDocument) {
-      return res.status(404).json({ error: 'Document not found' });
-    }
-    if (existingDocument.userId !== req.user.userId) {
-      return res.status(403).json({ error: 'Access denied' });
+    // Check user access and permissions - only owners can delete
+    const accessCheck = await Document.checkUserAccess(db, documentId, req.user.userId);
+    if (!accessCheck || !accessCheck.access || accessCheck.permission !== 'owner') {
+      return res.status(403).json({ error: 'Only document owners can delete documents' });
     }
 
     //function call to delete the document by the id form document model
-    const result = await Document.deleteById(db, new ObjectId(req.params.id));
+    const result = await Document.deleteById(db, documentId);
     
     //if no document found, return an error
     if (result.deletedCount === 0) {

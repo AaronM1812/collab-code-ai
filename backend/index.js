@@ -11,10 +11,11 @@ require('dotenv').config();
 const { Server } = require('socket.io');
 //mongoose for working with mongodb database
 const { MongoClient } = require('mongodb');
-//import the document routes
+//registering the routes
 const documentRoutes = require('./routes/documents');
 const aiRoutes = require('./routes/ai');
 const authRoutes = require('./routes/auth');
+const collaborationRoutes = require('./routes/collaboration');
 
 //creates the server
 const app = express();
@@ -51,15 +52,17 @@ app.get('/', (req, res) => {
   res.send('Hello from Collab Code AI backend!');
 });
 
-//app.use is used to handle routes, it is a middleware function that is used to handle routes
-// Document routes
+//app.use is used to handle routes, it is a middleware function that is used to handle routes, tells Express to use your auth routes for any requests starting with /api/...
+//document routes
 app.use('/api/documents', documentRoutes);
 //ai routes
 app.use('/api/ai', aiRoutes);
 //auth routes
 app.use('/api/auth', authRoutes);
+//collaboration routes
+app.use('/api/collaboration', collaborationRoutes);
 
-// Start server
+//start server
 //tells app to start listening on the port
 const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

@@ -6,6 +6,9 @@ class Document {
     this.content = data.content || '// Start coding here!';
     this.language = data.language || 'javascript';
     this.userId = data.userId || null;
+    this.owner = data.owner || null;
+    this.collaborators = data.collaborators || [];
+    this.isPublic = data.isPublic || false;
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || new Date();
   }
@@ -26,10 +29,27 @@ class Document {
     return await db.collection('documents').findOne({ _id: id });
   }
 
-  //find all documents for a specific user
+  //find all documents for a specific user (owned + shared)
   static async findAllByUser(db, userId) {
-    //find all documents for the user
+    //find all documents where user is owner or collaborator
+    return await db.collection('documents').find({
+      $or: [
+        { userId: userId },
+        { 'collaborators.userId': userId }
+      ]
+    }).toArray();
+  }
+
+  //find all documents owned by a user
+  static async findAllOwnedByUser(db, userId) {
     return await db.collection('documents').find({ userId: userId }).toArray();
+  }
+
+  //find all documents shared with a user
+  static async findAllSharedWithUser(db, userId) {
+    return await db.collection('documents').find({
+      'collaborators.userId': userId
+    }).toArray();
   }
 
   //find all documents (for admin purposes, or remove this method)
@@ -62,7 +82,10 @@ class Document {
     //find the documents by the name and user
     return await db.collection('documents').find({
       name: { $regex: name, $options: 'i' },
-      userId: userId
+      $or: [
+        { userId: userId },
+        { 'collaborators.userId': userId }
+      ]
     }).toArray();
   }
 
@@ -72,6 +95,75 @@ class Document {
     return await db.collection('documents').find({
       name: { $regex: name, $options: 'i' }
     }).toArray();
+  }
+
+  //add collaborator to document
+  static async addCollaborator(db, documentId, collaboratorData) {
+    return await db.collection('documents').updateOne(
+      { _id: documentId },
+      { 
+        $addToSet: { 
+          collaborators: {
+            userId: collaboratorData.userId,
+            username: collaboratorData.username,
+            email: collaboratorData.email,
+            permission: collaboratorData.permission || 'read', // 'read' or 'write'
+            addedAt: new Date()
+          }
+        }
+      }
+    );
+  }
+
+  //remove collaborator from document
+  static async removeCollaborator(db, documentId, userId) {
+    return await db.collection('documents').updateOne(
+      { _id: documentId },
+      { 
+        $pull: { 
+          collaborators: { userId: userId }
+        }
+      }
+    );
+  }
+
+  //update collaborator permission
+  static async updateCollaboratorPermission(db, documentId, userId, permission) {
+    return await db.collection('documents').updateOne(
+      { 
+        _id: documentId,
+        'collaborators.userId': userId
+      },
+      { 
+        $set: { 
+          'collaborators.$.permission': permission
+        }
+      }
+    );
+  }
+
+  //check if user has access to document
+  static async checkUserAccess(db, documentId, userId) {
+    const document = await this.findById(db, documentId);
+    if (!document) return null;
+
+    // Check if user is owner
+    if (document.userId === userId) {
+      return { access: true, permission: 'owner' };
+    }
+
+    // Check if user is collaborator
+    const collaborator = document.collaborators.find(c => c.userId === userId);
+    if (collaborator) {
+      return { access: true, permission: collaborator.permission };
+    }
+
+    // Check if document is public
+    if (document.isPublic) {
+      return { access: true, permission: 'read' };
+    }
+
+    return { access: false, permission: null };
   }
 }
 

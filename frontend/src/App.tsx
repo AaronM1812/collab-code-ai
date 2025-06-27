@@ -16,6 +16,8 @@ import AIAssistant from './components/AIAssistant';
 import { Document, apiService } from './services/api';
 //importing the css file for the app
 import './App.css';
+//importing AuthPage
+import AuthPage from './components/AuthPage';
 
 //importing yjs and the websocket provider for real-time collaboration instead of socket.io
 import * as Y from 'yjs';
@@ -26,27 +28,23 @@ import { MonacoBinding } from 'y-monaco';
 
 //main app components which will return the UI that will be shown in the browser
 function App() {
-  //state to store the current document
+  // All hooks at the top
+  const [user, setUser] = useState(() => {
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
   const [currentDocument, setCurrentDocument] = useState<Document | null>(null);
-  //state to store the current code
   const [code, setCode] = useState('// Start coding here!');
-  //state to control modal visibility
   const [isModalOpen, setIsModalOpen] = useState(false);
-  //state to control AI assistant modal visibility
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
-  //ref to control the editor
   const editorRef = useRef<any>(null);
-  //socket reference (so it persists across renders, through use ref)
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    // Connect to backend socket.io server (keep for presence/chat if needed)
     socketRef.current = io('http://localhost:3001');
-
     socketRef.current.on('connect', () => {
       console.log('Connected to backend with socket id:', socketRef.current?.id);
     });
-
     return () => {
       socketRef.current?.disconnect();
     };
@@ -191,6 +189,11 @@ function App() {
       ydoc.destroy();
     };
   }, [currentDocument, editorRef.current]);
+
+  // Now do conditional rendering
+  if (!user) {
+    return <AuthPage />;
+  }
 
   return (
     //this is the main container for the app, it takes up the full height and width of the screen

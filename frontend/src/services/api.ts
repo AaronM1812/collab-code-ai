@@ -33,6 +33,26 @@ export interface AISuggestionRequest {
 export interface AISuggestionResponse {
   suggestion: string;
 }
+//these interfaces define the shape of data for registration login and response from the backend, whih gives type safety plus automplete in the ediotr
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+}
+
+export interface LoginData {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+  };
+}
 
 //this is the API service class
 class ApiService {
@@ -77,6 +97,20 @@ class ApiService {
     //post request to the AI route with code and prompt
     const response = await axios.post(`${API_BASE_URL}/ai/suggest`, data);
     //send the response to the frontend
+    return response.data;
+  }
+
+  //send registeration data to backend and returns response
+  async registerUser(data: RegisterData): Promise<{ message: string }> {
+    //sends a POST request to /api/auth/register with username, email, and password  
+    const response = await axios.post(`${API_BASE_URL}/auth/register`, data);
+    return response.data;
+  }
+
+  //send login data to backend and returns response
+  async loginUser(data: LoginData): Promise<AuthResponse> {
+    //sends a POST request to /api/auth/login with email and password
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, data);
     return response.data;
   }
 }

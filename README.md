@@ -7,6 +7,31 @@ A modern, real-time collaborative code editor with AI assistance, built with Rea
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
 ![MongoDB](https://img.shields.io/badge/MongoDB-6.0+-orange)
 
+## 📸 Screenshots
+
+> Below are key screens from **Collab Code AI**. Click images to enlarge.
+
+### 🏠 Main App Page  
+![Main Page](assets/images/mainpage.png)
+
+### 🤝 Real-Time Collaboration  
+![Collaborating](assets/images/collab.png)
+
+### 🧠 AI Assistant in Action  
+![AI Assistant](assets/images/ai.png)
+
+### 🆕 Create New Document  
+![New Document](assets/images/createdocument.png)
+
+### 🔗 Share Document Modal  
+![Share Document](assets/images/sharedocument.png)
+
+### 📝 Register Page  
+![Register Page](assets/images/register.png)
+
+### 🔐 Login Page  
+![Login Page](assets/images/login.png)
+
 ## ✨ Features
 
 ### 🤝 Real-Time Collaboration
@@ -344,4 +369,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Made with ❤️ by [Your Name]** 
+**Made with ❤️ by Aaron Malhi** 

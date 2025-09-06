@@ -26,6 +26,7 @@ const generateTokens = (user) => {
 // Register a new user
 router.post('/register', async (req, res) => {
   try {
+    console.log('Registration attempt:', { username: req.body.username, email: req.body.email });
     const { username, email, password } = req.body;
     const db = req.app.locals.db;
     

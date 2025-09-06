@@ -10,7 +10,7 @@ require('dotenv').config();
 //imports socket.io library for real-time communication
 const { Server } = require('socket.io');
 //mongoose for working with mongodb database
-const { MongoClient } = require('mongodb');
+const mongoose = require('mongoose');
 //registering the routes
 const documentRoutes = require('./routes/documents');
 const aiRoutes = require('./routes/ai');
@@ -31,17 +31,12 @@ app.use(express.json());
 //connect to mongodb database using environment variable
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/collab-code-ai';
 console.log('MongoDB URI:', MONGODB_URI.substring(0, 50) + '...'); // Log first 50 chars for debugging
-const client = new MongoClient(MONGODB_URI, {
-  serverSelectionTimeoutMS: 10000,
-  socketTimeoutMS: 45000,
-});
 
-client.connect()
+mongoose.connect(MONGODB_URI)
 .then(() => {
   console.log('Connected to MongoDB');
-  const db = client.db('collab-code-ai');
-  // Store db reference for use in routes
-  app.locals.db = db;
+  // Store mongoose connection for use in routes
+  app.locals.db = mongoose.connection.db;
 })
 .catch(err => {
   console.error('MongoDB connection error:', err);

@@ -2,7 +2,8 @@
 
 A modern, real-time collaborative code editor with AI assistance, built with React, Node.js, MongoDB, and Yjs for seamless multi-user coding experiences.
 
-![Collab Code AI Demo](https://img.shields.io/badge/Status-Production%20Ready-green)
+![Collab Code AI Demo](https://img.shields.io/badge/Status-Live%20Demo-green)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-https://collab--code--ai--frontend.onrender.com-blue)](https://collab-code-ai-frontend.onrender.com)
 ![React](https://img.shields.io/badge/React-18.2.0-blue)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green)
 ![MongoDB](https://img.shields.io/badge/MongoDB-6.0+-orange)
@@ -77,6 +78,14 @@ A modern, real-time collaborative code editor with AI assistance, built with Rea
                     │   Port: 27017   │
                     └─────────────────┘
 ```
+
+## 🌐 Live Demo
+
+**Try the live application**: [https://collab-code-ai-frontend.onrender.com](https://collab-code-ai-frontend.onrender.com)
+
+- Register a new account or login with existing credentials
+- Create documents and test real-time collaboration
+- Open multiple browser tabs to see live editing in action
 
 ## 🚀 Quick Start
 

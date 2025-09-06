@@ -33,6 +33,9 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/collab
 const client = new MongoClient(MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  tlsAllowInvalidHostnames: false,
 });
 
 client.connect()

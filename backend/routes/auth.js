@@ -37,17 +37,23 @@ router.post('/register', async (req, res) => {
     }
     
     const db = req.app.locals.db;
+    console.log('Database connection:', !!db);
     
     // Check if user already exists
+    console.log('Checking for existing users...');
     const existingUserByEmail = await User.findByEmail(db, email);
     const existingUserByUsername = await User.findByUsername(db, username);
+    console.log('Existing users:', { email: !!existingUserByEmail, username: !!existingUserByUsername });
     
     if (existingUserByEmail || existingUserByUsername) {
+      console.log('User already exists');
       return res.status(400).json({ error: 'Username or email already in use.' });
     }
     
     // Create the new user
+    console.log('Creating new user...');
     const user = await User.create(db, { username, email, password });
+    console.log('User created successfully:', user._id);
     
     res.status(201).json({ message: 'User registered successfully.' });
   } catch (err) {

@@ -27,7 +27,15 @@ const generateTokens = (user) => {
 router.post('/register', async (req, res) => {
   try {
     console.log('Registration attempt:', { username: req.body.username, email: req.body.email });
+    console.log('Request body:', req.body);
     const { username, email, password } = req.body;
+    
+    // Validate required fields
+    if (!username || !email || !password) {
+      console.log('Missing required fields:', { username: !!username, email: !!email, password: !!password });
+      return res.status(400).json({ error: 'Username, email, and password are required.' });
+    }
+    
     const db = req.app.locals.db;
     
     // Check if user already exists

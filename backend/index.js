@@ -24,7 +24,10 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 //allows frontend to communicate with backend
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "https://collab-code-ai-frontend.onrender.com"],
+  credentials: true
+}));
 //backend can understand json data sent by frontend
 app.use(express.json());
 
@@ -74,7 +77,7 @@ const server = app.listen(PORT, () => {
 //creates socket.io server attached to the http server above
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://collab-code-ai-frontend.onrender.com"],
     methods: ["GET", "POST"]
   }
 });

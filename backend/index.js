@@ -30,12 +30,10 @@ app.use(express.json());
 
 //connect to mongodb database using environment variable
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/collab-code-ai';
+console.log('MongoDB URI:', MONGODB_URI.substring(0, 50) + '...'); // Log first 50 chars for debugging
 const client = new MongoClient(MONGODB_URI, {
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 10000,
   socketTimeoutMS: 45000,
-  tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsAllowInvalidHostnames: false,
 });
 
 client.connect()

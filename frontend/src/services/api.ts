@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 export interface Document {
   _id: string;
@@ -272,6 +272,8 @@ class ApiService {
   //send registeration data to backend and returns response
   async registerUser(data: RegisterData): Promise<{ message: string }> {
     //sends a POST request to /api/auth/register with username, email, and password  
+    console.log('Frontend API URL:', API_BASE_URL);
+    console.log('Registration data:', data);
     const response = await axios.post(`${API_BASE_URL}/auth/register`, data);
     return response.data;
   }

@@ -28,8 +28,9 @@ app.use(cors());
 //backend can understand json data sent by frontend
 app.use(express.json());
 
-//connect to mongodb database, now using local host
-const client = new MongoClient('mongodb://localhost:27017/collab-code-ai', {
+//connect to mongodb database using environment variable
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/collab-code-ai';
+const client = new MongoClient(MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 });
@@ -43,7 +44,7 @@ client.connect()
 })
 .catch(err => {
   console.error('MongoDB connection error:', err);
-  console.error('Please check your MONGODB_URI in the .env file');
+  console.error('Please check your MONGODB_URI environment variable');
 });
 
 // Test route

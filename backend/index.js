@@ -49,11 +49,6 @@ app.get('/', (req, res) => {
   res.send('Hello from Collab Code AI backend!');
 });
 
-// Debug route to test API connectivity
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'API is working!', timestamp: new Date().toISOString() });
-});
-
 //app.use is used to handle routes, it is a middleware function that is used to handle routes, tells Express to use your auth routes for any requests starting with /api/...
 //document routes
 app.use('/api/documents', documentRoutes);
@@ -63,6 +58,11 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/auth', authRoutes);
 //collaboration routes
 app.use('/api/collaboration', collaborationRoutes);
+
+// Debug route to test API connectivity (after other routes)
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'API is working!', timestamp: new Date().toISOString() });
+});
 
 //start server
 //tells app to start listening on the port
